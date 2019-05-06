@@ -4,7 +4,7 @@
   "description": "Source code for lambda that handles interactions between Bixby and DynamoDB.",
   "main": "index.js",
   "scripts": {
-    "test": "echo jasmine-node spec",
+    "test": "echo jasmine-node spec need jasmine-node as a devDependency",
     "watch": "echo jasmine-node --autotest spec"
   },
   "repository": {
@@ -23,6 +23,5 @@
     "moment": "^2.21.0"
   },
   "devDependencies": {
-    "jasmine-node": "^1.14.5"
   }
 }

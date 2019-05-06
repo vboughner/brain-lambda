@@ -4,6 +4,7 @@
   "description": "My Brain lambda for interacting with Bixby Capsule",
   "main": "index.js",
   "scripts": {
+    "deploy":"./deploy.sh",
     "postinstall": "cd src && yarn install",
     "test": "echo cd src && yarn test",
     "watch": "echo cd src && yarn run watch"
