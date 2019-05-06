@@ -1,0 +1,21 @@
+{
+  "name": "brain-lambda",
+  "version": "1.0.0",
+  "description": "My Brain lambda for interacting with Bixby Capsule",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "echo cd src && yarn install",
+    "test": "echo cd src && yarn test",
+    "watch": "echo cd src && yarn run watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vboughner/brain-lambda.git"
+  },
+  "author": "Van A. Boughner",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/vboughner/brain-lambda/issues"
+  },
+  "homepage": "https://github.com/vboughner/brain-lambda#readme"
+}
