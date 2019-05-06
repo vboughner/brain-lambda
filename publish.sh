@@ -2,4 +2,4 @@ rm index.zip
 cd src
 zip ../index.zip *
 cd .. 
-aws lambda update-function-code --function-name myHelloWorld --zip-file fileb://index.zip
+aws lambda update-function-code --function-name brain-lambda --zip-file fileb://index.zip
