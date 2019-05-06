@@ -1,0 +1,28 @@
+{
+  "name": "brain-lambda-src",
+  "version": "1.0.0",
+  "description": "Source code for lambda that handles interactions between Bixby and DynamoDB.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo jasmine-node spec",
+    "watch": "echo jasmine-node --autotest spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vboughner/brain-lambda.git"
+  },
+  "author": "Van A. Boughner",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/vboughner/brain-lambda/issues"
+  },
+  "homepage": "https://github.com/vboughner/brain-lambda#readme",
+  "dependencies": {
+    "aws-sdk": "^2.203.0",
+    "fuse.js": "^3.2.0",
+    "moment": "^2.21.0"
+  },
+  "devDependencies": {
+    "jasmine-node": "^1.14.5"
+  }
+}
