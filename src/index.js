@@ -9,6 +9,62 @@ const timeModule = require('./time');
 exports.handler = async (event) => {
     const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
     const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
+    const body = event['body-json'];
+    let response;
+    console.log('body-json', body);
+
+    if (body.statement) {
+        let cleanText = wordModule.cleanUpResponseText(body.statement);
+        console.log('statement:', cleanText)
+
+        const getResponseWithPromise = (userId, deviceId, inputText) => {
+          return new Promise((resolve, reject) => {
+            const attributes = {};
+            const callback = (callbackResponse) => {
+              resolve(callbackResponse);
+            };
+            getResponseToStatement(userId, deviceId, inputText, attributes, callback);
+          });
+        };
+
+        const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
+        console.log('responseText was', responseText);
+        response = {
+            statusCode: 200,
+            body: JSON.stringify(responseText),
+        };
+    } else if (body.question) {
+        let cleanText = wordModule.cleanUpResponseText(body.question);
+        console.log('qyestion:', cleanText)
+
+        const getResponseWithPromise = (userId, deviceId, inputText) => {
+          return new Promise((resolve, reject) => {
+            const attributes = {};
+            const callback = (callbackResponse) => {
+              resolve(callbackResponse);
+            };
+            getResponseToQuestion(userId, deviceId, inputText, attributes, callback);
+          });
+        };
+
+        const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
+        console.log('responseText was', responseText);
+        response = {
+            statusCode: 200,
+            body: JSON.stringify(responseText),
+        };
+    } else {
+        response = {
+            statusCode: 200,
+            body: JSON.stringify('that was neither a question nor a statement')
+        };
+    }
+    return response;
+};
+
+exports.old_handler = async (event) => {
+    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
+    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
     const text = 'when is Symons birthday?';
     let cleanText = wordModule.cleanUpResponseText(text);
     console.log('cleanedText is', cleanText)
@@ -186,7 +242,7 @@ const handleCmdlineQuestion = async (userId, deviceId, content) => {
 //     node index.js delete
 //
 // the following bit of code should only run when we are NOT on the real lambda service
-if (process && process.argv) {
+if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src') !== -1) {
     // console.log('argv', process.argv);
     if (process.argv.length === 4) {
         const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
