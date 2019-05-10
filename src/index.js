@@ -6,88 +6,70 @@ const searchModule = require('./search');
 const dbModule = require('./db');
 const timeModule = require('./time');
 
+const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY'];
+
 exports.handler = async (event) => {
-    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
-    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
     const body = event['body-json'];
-    let response;
     console.log('body-json', body);
+    console.log('process.env', process.env)
+    let response;
 
-    if (body.statement) {
-        let cleanText = wordModule.cleanUpResponseText(body.statement);
-        console.log('statement:', cleanText)
-
-        const getResponseWithPromise = (userId, deviceId, inputText) => {
-          return new Promise((resolve, reject) => {
-            const attributes = {};
-            const callback = (callbackResponse) => {
-              resolve(callbackResponse);
+    if (body) {
+        if (SECRET_CLIENT_API_KEY && SECRET_CLIENT_API_KEY === body['secretClientApiKey']) {
+            const userId = body.userId;
+            const deviceId = body.deviceId || 'unknown-device-id';
+            if (userId) {
+                if (body['statement']) {
+                    let cleanText = wordModule.cleanUpResponseText(body['statement']);
+                    const responseText = await getStatementResponseWithPromise(userId, deviceId, cleanText);
+                    response = {
+                        statusCode: 200,
+                        body: JSON.stringify(responseText),
+                    };
+                } else if (body['question']) {
+                    let cleanText = wordModule.cleanUpResponseText(body['question']);
+                    const responseText = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
+                    response = {
+                        statusCode: 200,
+                        body: JSON.stringify(responseText),
+                    };
+                } else {
+                    response = {
+                        statusCode: 200,
+                        body: JSON.stringify('missing both question or statement fields, need one')
+                    };
+                }
+            } else {
+                response = {
+                    statusCode: 200,
+                    body: JSON.stringify('missing userId field')
+                };
+            }
+        } else {
+            response = {
+                statusCode: 200,
+                body: JSON.stringify('incorrect secretClientApiKey field')
             };
-            getResponseToStatement(userId, deviceId, inputText, attributes, callback);
-          });
-        };
-
-        const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
-        console.log('responseText was', responseText);
-        response = {
-            statusCode: 200,
-            body: JSON.stringify(responseText),
-        };
-    } else if (body.question) {
-        let cleanText = wordModule.cleanUpResponseText(body.question);
-        console.log('qyestion:', cleanText)
-
-        const getResponseWithPromise = (userId, deviceId, inputText) => {
-          return new Promise((resolve, reject) => {
-            const attributes = {};
-            const callback = (callbackResponse) => {
-              resolve(callbackResponse);
-            };
-            getResponseToQuestion(userId, deviceId, inputText, attributes, callback);
-          });
-        };
-
-        const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
-        console.log('responseText was', responseText);
-        response = {
-            statusCode: 200,
-            body: JSON.stringify(responseText),
-        };
+        }
     } else {
         response = {
             statusCode: 200,
-            body: JSON.stringify('that was neither a question nor a statement')
+            body: JSON.stringify('missing body-json field')
         };
     }
+
+    console.log('response', response);
     return response;
 };
 
-exports.old_handler = async (event) => {
-    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
-    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
-    const text = 'when is Symons birthday?';
-    let cleanText = wordModule.cleanUpResponseText(text);
-    console.log('cleanedText is', cleanText)
-
-    // the rest apis are going to come in already knowing if it is a question or not, so no need to worry
-    // about that in here right now, there will be some REST apis
-
-    const getResponseWithPromise = (userId, deviceId, inputText) => {
-      return new Promise((resolve, reject) => {
+const getQuestionResponseWithPromise = (userId, deviceId, inputText) => {
+    return new Promise((resolve, reject) => {
         const attributes = {};
         const callback = (callbackResponse) => {
-          resolve(callbackResponse);
+            resolve(callbackResponse);
         };
         getResponseToQuestion(userId, deviceId, inputText, attributes, callback);
-      });
-    };
-
-    const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
-    console.log('responseText was', responseText);
-    return {
-      statusCode: 200,
-      body: JSON.stringify(responseText),
-    };
+    });
 };
 
 // returns null if the text is not a question, otherwise returns a response to the question,
@@ -169,6 +151,16 @@ function selectBestMemoriesForQuestion(memories, question) {
     }
 }
 
+const getStatementResponseWithPromise = (userId, deviceId, inputText) => {
+    return new Promise((resolve, reject) => {
+        const attributes = {};
+        const callback = (callbackResponse) => {
+            resolve(callbackResponse);
+        };
+        getResponseToStatement(userId, deviceId, inputText, attributes, callback);
+    });
+};
+
 // return a response after storing information
 function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     let refinedText = wordModule.cutStatementChatter(text);
@@ -201,18 +193,7 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
 const handleCmdlineStatement = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('statement:', cleanText);
-
-    const getResponseWithPromise = (userId, deviceId, inputText) => {
-        return new Promise((resolve, reject) => {
-            const attributes = {};
-            const callback = (callbackResponse) => {
-                resolve(callbackResponse);
-            };
-            getResponseToStatement(userId, deviceId, inputText, attributes, callback);
-        });
-    };
-
-    const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
+    const responseText = await getStatementResponseWithPromise(userId, deviceId, cleanText);
     console.log('response:', responseText);
     return responseText;
 };
@@ -220,18 +201,7 @@ const handleCmdlineStatement = async (userId, deviceId, content) => {
 const handleCmdlineQuestion = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('question:', cleanText);
-
-    const getResponseWithPromise = (userId, deviceId, inputText) => {
-        return new Promise((resolve, reject) => {
-            const attributes = {};
-            const callback = (callbackResponse) => {
-                resolve(callbackResponse);
-            };
-            getResponseToQuestion(userId, deviceId, inputText, attributes, callback);
-        });
-    };
-
-    const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
+    const responseText = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
     console.log('response:', responseText);
     return responseText;
 };
