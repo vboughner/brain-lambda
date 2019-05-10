@@ -141,3 +141,66 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
         callback('hmmm, I heard you say, ' + text + ', that didn\'t sound like a memory I could store');
     }
 }
+
+const handleCmdlineStatement = async (userId, deviceId, content) => {
+    let cleanText = wordModule.cleanUpResponseText(content);
+    console.log('statement:', cleanText);
+
+    const getResponseWithPromise = (userId, deviceId, inputText) => {
+        return new Promise((resolve, reject) => {
+            const attributes = {};
+            const callback = (callbackResponse) => {
+                resolve(callbackResponse);
+            };
+            getResponseToStatement(userId, deviceId, inputText, attributes, callback);
+        });
+    };
+
+    const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
+    console.log('response:', responseText);
+    return responseText;
+};
+
+const handleCmdlineQuestion = async (userId, deviceId, content) => {
+    let cleanText = wordModule.cleanUpResponseText(content);
+    console.log('question:', cleanText);
+
+    const getResponseWithPromise = (userId, deviceId, inputText) => {
+        return new Promise((resolve, reject) => {
+            const attributes = {};
+            const callback = (callbackResponse) => {
+                resolve(callbackResponse);
+            };
+            getResponseToQuestion(userId, deviceId, inputText, attributes, callback);
+        });
+    };
+
+    const responseText = await getResponseWithPromise(userId, deviceId, cleanText);
+    console.log('response:', responseText);
+    return responseText;
+};
+
+// command line tests use something like this:
+//     node index.js statement 'my birthday is in january'
+//     node index.js question 'my birthday'
+//     node index.js delete
+//
+// the following bit of code should only run when we are NOT on the real lambda service
+if (process && process.argv) {
+    // console.log('argv', process.argv);
+    if (process.argv.length === 4) {
+        const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
+        const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
+        const command = process.argv[2];
+        const content = process.argv[3];
+        if (command === 'statement') {
+            handleCmdlineStatement(userId, deviceId, content);
+            return 0;
+        } else if (command === 'question') {
+            handleCmdlineQuestion(userId, deviceId, content);
+            return 0;
+        }
+    }
+    console.log('usage: node index.js [statement|question] "content"');
+    return 1;
+}
