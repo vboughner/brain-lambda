@@ -11,7 +11,7 @@ const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY'];
 exports.handler = async (event) => {
     const body = event['body-json'];
     console.log('body-json', body);
-    console.log('process.env', process.env)
+    // console.log('process.env', process.env)
     let response;
 
     if (body) {
@@ -24,37 +24,49 @@ exports.handler = async (event) => {
                     const responseText = await getStatementResponseWithPromise(userId, deviceId, cleanText);
                     response = {
                         statusCode: 200,
-                        body: JSON.stringify(responseText),
+                        body: {
+                            answer: JSON.stringify(responseText),
+                        },
                     };
                 } else if (body['question']) {
                     let cleanText = wordModule.cleanUpResponseText(body['question']);
                     const responseText = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
                     response = {
                         statusCode: 200,
-                        body: JSON.stringify(responseText),
+                        body: {
+                            answer: JSON.stringify(responseText),
+                        },
                     };
                 } else {
                     response = {
                         statusCode: 200,
-                        body: JSON.stringify('missing both question or statement fields, need one')
+                        body: {
+                            answer: JSON.stringify('missing both question or statement fields, need one'),
+                        },
                     };
                 }
             } else {
                 response = {
                     statusCode: 200,
-                    body: JSON.stringify('missing userId field')
+                    body: {
+                        answer: JSON.stringify('missing userId field'),
+                    },
                 };
             }
         } else {
             response = {
                 statusCode: 200,
-                body: JSON.stringify('incorrect secretClientApiKey field')
+                body: {
+                    answer: JSON.stringify('incorrect secretClientApiKey field'),
+                }
             };
         }
     } else {
         response = {
             statusCode: 200,
-            body: JSON.stringify('missing body-json field')
+            body: {
+                answer: JSON.stringify('missing body-json field'),
+            }
         };
     }
 
