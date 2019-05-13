@@ -40,8 +40,8 @@ function loadMemories(userId, deviceId, callback) {
     });
 }
 
-// store a line of text in the db as another memory,
-// call the callback when done, return true if successful, false if not successful
+// store a line of text in the db. call the callback when done, returns an object describing what was stored,
+// or null if not successfully stored
 function storeMemory(userId, deviceId, text, callback) {
     let when = Date.now().toString();
     let params = {
@@ -59,10 +59,10 @@ function storeMemory(userId, deviceId, text, callback) {
     docClient.put(params, function(err, data) {
         if (err) {
             console.log('ERROR: problem in put operation = ' + JSON.stringify(err));
-            callback(false);
+            callback(null);
         }
         else {
-            callback(true);
+            callback(params.Item);
         }
     });
 }

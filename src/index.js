@@ -1,7 +1,6 @@
 'use strict';
 
 const wordModule = require('./word');
-const commandModule = require('./command');
 const searchModule = require('./search');
 const dbModule = require('./db');
 const timeModule = require('./time');
@@ -19,24 +18,35 @@ exports.handler = async (event) => {
             if (userId) {
                 if (body['statement']) {
                     let cleanText = wordModule.cleanUpResponseText(body['statement']);
-                    const responseText = await getStatementResponseWithPromise(userId, deviceId, cleanText);
-                    console.log('statement:', cleanText, '|', responseText)
+                    const completeResponse = await getStatementResponseWithPromise(userId, deviceId, cleanText);
+                    console.log('statement:', cleanText)
+                    console.log('completeResponse:', completeResponse)
                     response = {
                         statusCode: 200,
                         body: {
-                            answer: responseText,
+                            ...completeResponse,
                         },
                     };
                 } else if (body['question']) {
                     let cleanText = wordModule.cleanUpResponseText(body['question']);
-                    const responseText = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
-                    console.log('question:', cleanText, '|', responseText)
-                    response = {
-                        statusCode: 200,
-                        body: {
-                            answer: responseText,
-                        },
-                    };
+                    const completeResponse = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
+                    console.log('question:', cleanText)
+                    if (completeResponse) {
+                        console.log('completeResponse:', completeResponse)
+                        response = {
+                            statusCode: 200,
+                            body: {
+                                ...completeResponse,
+                            },
+                        };
+                    } else {
+                        response = {
+                            statusCode: 200,
+                            body: {
+                                answer: 'missing a complete response, maybe it was not a question',
+                            },
+                        };
+                    }
                 } else {
                     response = {
                         statusCode: 200,
@@ -83,62 +93,39 @@ const getQuestionResponseWithPromise = (userId, deviceId, inputText) => {
     });
 };
 
-// returns null if the text is not a question, otherwise returns a response to the question,
-// questions typically contain a question word, or are so short (2 words or less) that they
-// could only be a question
+// assumes the input is a question and returns a complete response to the question, with
+// an object that contains all the possible responses, in order from best to worst (or
+// an empty array of answers if there are no matches)
+// TODO: move compilation of response into the capsule, englishDebug is only for debugging
 function getResponseToQuestion(userId, deviceId, text, attributes, callback) {
-    let responseAttributes = Object.assign({}, attributes);
     let refinedText = wordModule.cutQuestionChatter(text);
-    let isReallyShort = wordModule.containsNumWordsOrLess(refinedText, 2);
 
-    if (isReallyShort || wordModule.startsWithQuestionWord(refinedText)) {
-        let response = isReallyShort ?
-            'you asked me about ' + refinedText + '. ' :
-            'you asked me ' + refinedText + '. ';
-        let reprompt = '';
-
-        dbModule.loadMemories(userId, deviceId, (recordedMemories) => {
-            let bestMemories = selectBestMemoriesForQuestion(recordedMemories, refinedText);
-            if (bestMemories) {
-                let selectedMemory = bestMemories[0];
-                let howLongAgoText = timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored));
-                response = response + 'you told me ' + howLongAgoText + ', ' + selectedMemory.Text;
-                if (bestMemories.length > 1) {
-                    // there are multiple memories that match, put them in a play eventually loop
-                    responseAttributes =
-                        commandModule.getAttributesForHearMoreMemories(responseAttributes, bestMemories.slice(1));
-                    response = response + ((bestMemories.length > 2) ?
-                        '. there are ' + (bestMemories.length - 1) + ' more memories about this, ' :
-                        '. there is one more memory about this, ');
-                    response = response + 'would you like to hear more?';
-                    reprompt = 'would you like to hear more?  yes or no';
-                }
+    dbModule.loadMemories(userId, deviceId, (recordedMemories) => {
+        let bestMemories = selectBestMemoriesForQuestion(recordedMemories, refinedText);
+        let response = {};
+        response.answers = [];
+        if (bestMemories && bestMemories.length > 0) {
+            for (let i = 0; i < bestMemories.length; i++) {
+                const selectedMemory = bestMemories[i];
+                response.answers[i] = {
+                    text: selectedMemory.Text,
+                    whenStored: selectedMemory.WhenStored,
+                    userId: selectedMemory.UserId,
+                    deviceId: selectedMemory.DeviceId,
+                    score: selectedMemory.Score,
+                    howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: move to capsule
+                };
             }
-            else {
-                response = response + 'I don\'t have a memory that makes sense as an answer to that question.';
-            }
-
-            if (responseAttributes.Command) {
-                callback(response, reprompt, responseAttributes);
-            }
-            else {
-                if (responseAttributes.AfterNextQuestion) {
-                    if (!responseAttributes.AfterNextQuestion.Persistent) {
-                        delete responseAttributes.AfterNextQuestion;
-                    }
-                    callback(response + '. ' + attributes.AfterNextQuestion.Speak,
-                        attributes.AfterNextQuestion.Listen, responseAttributes);
-                }
-                else {
-                    callback(response);
-                }
-            }
-        });
-        return true;
-    }
-    else {
-        return false;
-    }
+            response.success = true;
+            response.englishDebug = 'You told me ' + response.answers[0].howLongAgo + ', "' + response.answers[0].text + '"';
+        }
+        else {
+            response.success = false;
+            response.englishDebug = 'I don\'t have a memory that makes sense as an answer to that question.';
+        }
+        console.log('question response', response);
+        callback(response);
+    });
 }
 
 // select the memories that best match the question and returns an array of them,
@@ -172,49 +159,52 @@ const getStatementResponseWithPromise = (userId, deviceId, inputText) => {
     });
 };
 
-// return a response after storing information
+// return a response object that contains everything about a state,
+// after storing information
+// TODO: move compilation of response into the capsule, englishDebug is only for debugging
 function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     let refinedText = wordModule.cutStatementChatter(text);
+    let response = {};
     if (refinedText) {
-        dbModule.storeMemory(userId, deviceId, refinedText, (success) => {
-            if (success) {
-                if (attributes && attributes.AfterNextStatement) {
-                    let followupAttributes = Object.assign({}, attributes);
-                    if (!followupAttributes.AfterNextStatement.Persistent) {
-                        delete followupAttributes.AfterNextStatement;
-                    }
-                    callback('I will remember that you said ' + refinedText +
-                        '. ' + attributes.AfterNextStatement.Speak,
-                        attributes.AfterNextStatement.Listen, followupAttributes);
-                }
-                else {
-                    callback('I will remember that you said ' + refinedText);
-                }
+        dbModule.storeMemory(userId, deviceId, refinedText, (item) => {
+            if (item) {
+                response.success = true;
+                response.text = item.Text;
+                response.whenStored = item.WhenStored;
+                response.userId = item.UserId;
+                response.deviceId = item.DeviceId;
+                response.englishDebug = 'I will remember that you said "' + refinedText + '".';
             }
             else {
-                callback('I am sorry, I could not store that you said ' + refinedText);
+                response.success = false;
+                response.englishDebug = 'I am sorry, I could not store that you said "' + refinedText + '".';
             }
+            console.log('statement response', response);
+            callback(response);
         });
     }
     else {
-        callback('hmmm, I heard you say, ' + text + ', that didn\'t sound like a memory I could store');
+        response.success = false;
+        response.englishDebug = 'Hmmm, I heard you say, ' + text + ', that didn\'t sound like a memory I could store.';
+        console.log('statement response', response);
+        callback(response);
     }
 }
 
 const handleCmdlineStatement = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('statement:', cleanText);
-    const responseText = await getStatementResponseWithPromise(userId, deviceId, cleanText);
-    console.log('response:', responseText);
-    return responseText;
+    const response = await getStatementResponseWithPromise(userId, deviceId, cleanText);
+    console.log('response:', response.englishDebug);
+    return response.englishDebug;
 };
 
 const handleCmdlineQuestion = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('question:', cleanText);
-    const responseText = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
-    console.log('response:', responseText);
-    return responseText;
+    const response = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
+    console.log('response:', response.englishDebug);
+    return response.englishDebug;
 };
 
 // command line tests use something like this:
