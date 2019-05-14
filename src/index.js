@@ -1,86 +1,66 @@
 'use strict';
 
-const wordModule = require('./word');
-const searchModule = require('./search');
-const dbModule = require('./db');
-const timeModule = require('./time');
+const semver = require('semver')
+const wordModule = require('./word')
+const searchModule = require('./search')
+const dbModule = require('./db')
+const timeModule = require('./time')
+const error = require('./error.js')
 
-const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY'];
+const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
+const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
 
 exports.handler = async (event) => {
-    const body = event['body-json'];
-    let response;
+    const body = event['body-json']
+    if (!body) {
+        return error.getResponse(error.MISSING_BODY)
+    }
+    const clientVersion = body['clientVersion']
+    if (!clientVersion || !semver.satisfies(clientVersion, CLIENT_VERSION_SEMVER_SATISFIES)) {
+        return error.getResponse(error.INCORRECT_CLIENT_VERSION)
+    }
+    console.log('clientVersion', clientVersion, 'satisfies semver:', CLIENT_VERSION_SEMVER_SATISFIES)
+    if (!SECRET_CLIENT_API_KEY || SECRET_CLIENT_API_KEY !== body['secretClientApiKey']) {
+        return error.getResponse(error.INCORRECT_CLIENT_AUTH)
+    }
+    const userId = body['userId']
+    if (!userId) {
+        return error.getResponse(error.MISSING_USER_ID)
+    }
+    const deviceId = body['deviceId'] || 'unknown-device-id'
 
-    if (body) {
-        if (SECRET_CLIENT_API_KEY && SECRET_CLIENT_API_KEY === body['secretClientApiKey']) {
-            const userId = body.userId;
-            const deviceId = body.deviceId || 'unknown-device-id';
-            if (userId) {
-                if (body['statement']) {
-                    let cleanText = wordModule.cleanUpResponseText(body['statement']);
-                    const completeResponse = await getStatementResponseWithPromise(userId, deviceId, cleanText);
-                    console.log('statement:', cleanText)
-                    console.log('completeResponse:', completeResponse)
-                    response = {
-                        statusCode: 200,
-                        body: {
-                            ...completeResponse,
-                        },
-                    };
-                } else if (body['question']) {
-                    let cleanText = wordModule.cleanUpResponseText(body['question']);
-                    const completeResponse = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
-                    console.log('question:', cleanText)
-                    if (completeResponse) {
-                        console.log('completeResponse:', completeResponse)
-                        response = {
-                            statusCode: 200,
-                            body: {
-                                ...completeResponse,
-                            },
-                        };
-                    } else {
-                        response = {
-                            statusCode: 200,
-                            body: {
-                                answer: 'missing a complete response, maybe it was not a question',
-                            },
-                        };
-                    }
-                } else {
-                    response = {
-                        statusCode: 200,
-                        body: {
-                            answer: 'missing both question or statement fields, need one',
-                        },
-                    };
-                }
-            } else {
-                response = {
-                    statusCode: 200,
-                    body: {
-                        answer: 'missing userId field',
-                    },
-                };
-            }
-        } else {
-            response = {
-                statusCode: 200,
-                body: {
-                    answer: 'incorrect secretClientApiKey field',
-                }
-            };
-        }
-    } else {
+    let response;
+    if (body['statement']) {
+        let cleanText = wordModule.cleanUpResponseText(body['statement'])
+        const completeResponse = await getStatementResponseWithPromise(userId, deviceId, cleanText)
+        console.log('statement:', cleanText)
+        console.log('completeResponse:', completeResponse)
         response = {
             statusCode: 200,
             body: {
-                answer: 'missing body-json field',
-            }
+                ...completeResponse,
+            },
         };
+    } else if (body['question']) {
+        let cleanText = wordModule.cleanUpResponseText(body['question'])
+        const completeResponse = await getQuestionResponseWithPromise(userId, deviceId, cleanText)
+        console.log('question:', cleanText)
+        if (completeResponse) {
+            console.log('completeResponse:', completeResponse)
+            response = {
+                statusCode: 200,
+                body: {
+                    ...completeResponse,
+                },
+            };
+        } else {
+            response = error.getResponse(error.EMPTY_QUESTION)
+        }
+    } else {
+        response = error.getResponse(error.MISSING_QUESTION_OR_STATEMENT)
     }
 
-    return response;
+    return response
 };
 
 const getQuestionResponseWithPromise = (userId, deviceId, inputText) => {
