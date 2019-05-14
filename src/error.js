@@ -6,7 +6,7 @@ const INCORRECT_CLIENT_VERSION = 1002
 const INCORRECT_CLIENT_AUTH = 1003
 const MISSING_USER_ID = 1004
 const EMPTY_QUESTION = 1005
-const MISSING_QUESTION_OR_STATEMENT = 1006
+const MISSING_API_COMMAND = 1006
 
 const MESSAGE = {
     [UNSPECIFIED]: 'error with no message yet defined',
@@ -15,7 +15,7 @@ const MESSAGE = {
     [INCORRECT_CLIENT_AUTH]: 'incorrect client authentication',
     [MISSING_USER_ID]: 'missing userId',
     [EMPTY_QUESTION]: 'missing a complete response, maybe it was not a question',
-    [MISSING_QUESTION_OR_STATEMENT]: 'missing both question or statement fields, need one',
+    [MISSING_API_COMMAND]: 'missing a field that specifies which action to take',
 }
 
 const getResponse = (errorCode = UNSPECIFIED, overrideErrorMessage = '') => {
@@ -41,7 +41,7 @@ module.exports = {
   INCORRECT_CLIENT_AUTH,
   MISSING_USER_ID,
   EMPTY_QUESTION,
-  MISSING_QUESTION_OR_STATEMENT,
+  MISSING_API_COMMAND,
   MESSAGE,
   getResponse,
 }

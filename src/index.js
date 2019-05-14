@@ -56,8 +56,14 @@ exports.handler = async (event) => {
         } else {
             response = error.getResponse(error.EMPTY_QUESTION)
         }
+    } else if (body['delete']) {
+        // TODO: implement delete one, delete some, and delete all
+        return error.getResponse(error.UNSPECIFIED, 'delete is not yet supported')
+    } else if (body['recall']) {
+        // TODO: implement recall one, recall some, and recall all
+        return error.getResponse(error.UNSPECIFIED, 'recall is not yet supported')
     } else {
-        response = error.getResponse(error.MISSING_QUESTION_OR_STATEMENT)
+        response = error.getResponse(error.MISSING_API_COMMAND)
     }
 
     return response
@@ -97,11 +103,11 @@ function getResponseToQuestion(userId, deviceId, text, attributes, callback) {
                 };
             }
             response.success = true;
-            response.englishDebug = 'You told me ' + response.answers[0].howLongAgo + ', "' + response.answers[0].text + '"';
+            response.englishDebug = 'You told me ' + response.answers[0].howLongAgo + ': ' + response.answers[0].text + '.';
         }
         else {
             response.success = false;
-            response.englishDebug = 'I don\'t have a memory that makes sense as an answer to that question.';
+            response.englishDebug = 'I don\'t have a memory that makes sense as an answer for that.';
         }
         console.log('question response', response);
         callback(response);
@@ -153,11 +159,11 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
                 response.whenStored = item.WhenStored;
                 response.userId = item.UserId;
                 response.deviceId = item.DeviceId;
-                response.englishDebug = 'I will remember that you said "' + refinedText + '".';
+                response.englishDebug = 'I will remember that you said: ' + refinedText + '.';
             }
             else {
                 response.success = false;
-                response.englishDebug = 'I am sorry, I could not store that you said "' + refinedText + '".';
+                response.englishDebug = 'I am sorry, I had a connection problem and could not store what you said.';
             }
             console.log('statement response', response);
             callback(response);
@@ -165,7 +171,7 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     }
     else {
         response.success = false;
-        response.englishDebug = 'Hmmm, I heard you say, ' + text + ', that didn\'t sound like a memory I could store.';
+        response.englishDebug = 'Hmmm, I heard you say, ' + text + ', but that didn\'t sound like a memory I could store.';
         console.log('statement response', response);
         callback(response);
     }
@@ -207,6 +213,8 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
             handleCmdlineQuestion(userId, deviceId, content);
             return 0;
         }
+        // TODO: implement delete all
+        // TODO: implement recall all
     }
     console.log('usage: node index.js [statement|question] "content"');
     return 1;

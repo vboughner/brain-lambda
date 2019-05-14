@@ -2,7 +2,8 @@
 
 // clean up the text in the response before it is used for anything
 function cleanUpResponseText(text) {
-    return stripPunctuation(text.toLowerCase());
+    return text.trim();
+    // return stripPunctuation(text.toLowerCase());
 };
 
 // strip out punctuation and double-spaces (probably only important for command line testing,
