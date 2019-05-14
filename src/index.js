@@ -60,8 +60,19 @@ exports.handler = async (event) => {
         // TODO: implement delete one, delete some, and delete all
         return error.getResponse(error.UNSPECIFIED, 'delete is not yet supported')
     } else if (body['recall']) {
-        // TODO: implement recall one, recall some, and recall all
-        return error.getResponse(error.UNSPECIFIED, 'recall is not yet supported')
+        const completeResponse = await getRecallWithPromise(userId, deviceId)
+        console.log('recall all')
+        if (completeResponse) {
+            console.log('completeResponse:', completeResponse)
+            response = {
+                statusCode: 200,
+                body: {
+                    ...completeResponse,
+                },
+            };
+        } else {
+            response = error.getResponse(error.UNSPECIFIED, 'problem with recall all')
+        }
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
     }
@@ -177,6 +188,43 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     }
 }
 
+const getRecallWithPromise = (userId, deviceId) => {
+    return new Promise((resolve, reject) => {
+        const callback = (callbackResponse) => {
+            resolve(callbackResponse);
+        };
+        getRecall(userId, deviceId, callback);
+    });
+};
+
+function getRecall(userId, deviceId, callback) {
+    dbModule.loadMemories(userId, deviceId, (recordedMemories) => {
+        let response = {};
+        response.answers = [];
+        if (recordedMemories && recordedMemories.length > 0) {
+            for (let i = 0; i < recordedMemories.length; i++) {
+                const selectedMemory = recordedMemories[i];
+                response.answers[i] = {
+                    text: selectedMemory.Text,
+                    whenStored: selectedMemory.WhenStored,
+                    userId: selectedMemory.UserId,
+                    deviceId: selectedMemory.DeviceId,
+                    score: selectedMemory.Score,
+                    howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: move to capsule
+                };
+            }
+            response.success = true;
+            response.englishDebug = 'You have ' + response.answers.length + (response.answers.length > 1 ? ' memories.' : ' memory');
+        }
+        else {
+            response.success = true;
+            response.englishDebug = 'There are no memories.';
+        }
+        console.log('recall response', response);
+        callback(response);
+    });
+}
+
 const handleCmdlineStatement = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('statement:', cleanText);
@@ -193,6 +241,13 @@ const handleCmdlineQuestion = async (userId, deviceId, content) => {
     return response.englishDebug;
 };
 
+const handleCmdlineRecall = async (userId, deviceId) => {
+    console.log('recall all');
+    const response = await getRecallWithPromise(userId, deviceId);
+    console.log('response:', response);
+    return response;
+};
+
 // command line tests use something like this:
 //     node index.js statement 'my birthday is in january'
 //     node index.js question 'my birthday'
@@ -200,10 +255,9 @@ const handleCmdlineQuestion = async (userId, deviceId, content) => {
 //
 // the following bit of code should only run when we are NOT on the real lambda service
 if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src') !== -1) {
-    // console.log('argv', process.argv);
+    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
+    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
     if (process.argv.length === 4) {
-        const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
-        const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
         const command = process.argv[2];
         const content = process.argv[3];
         if (command === 'statement') {
@@ -214,8 +268,14 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
             return 0;
         }
         // TODO: implement delete all
-        // TODO: implement recall all
+    } else if (process.argv.length === 3) {
+        const command = process.argv[2];
+        if (command === 'recall') {
+            handleCmdlineRecall(userId, deviceId);
+            return 0;
+        }
     }
-    console.log('usage: node index.js [statement|question] "content"');
+
+    console.log('usage: node index.js [statement|question|recall] "content"');
     return 1;
 }

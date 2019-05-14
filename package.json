@@ -9,7 +9,8 @@
     "test": "echo cd src && yarn test",
     "watch": "echo cd src && yarn run watch",
     "question": "node src/index.js question",
-    "statement": "node src/index.js statement"
+    "statement": "node src/index.js statement",
+    "recall": "node src/index.js recall"
   },
   "repository": {
     "type": "git",
