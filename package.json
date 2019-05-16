@@ -10,7 +10,7 @@
     "watch": "echo cd src && yarn run watch",
     "question": "node src/index.js question",
     "statement": "node src/index.js statement",
-    "recall": "node src/index.js recall"
+    "list": "node src/index.js list"
   },
   "repository": {
     "type": "git",

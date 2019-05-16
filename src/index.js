@@ -59,9 +59,9 @@ exports.handler = async (event) => {
     } else if (body['delete']) {
         // TODO: implement delete one, delete some, and delete all
         return error.getResponse(error.UNSPECIFIED, 'delete is not yet supported')
-    } else if (body['recall']) {
-        const completeResponse = await getRecallWithPromise(userId, deviceId)
-        console.log('recall all')
+    } else if (body['list']) {
+        const completeResponse = await getListWithPromise(userId, deviceId)
+        console.log('list')
         if (completeResponse) {
             console.log('completeResponse:', completeResponse)
             response = {
@@ -71,7 +71,7 @@ exports.handler = async (event) => {
                 },
             };
         } else {
-            response = error.getResponse(error.UNSPECIFIED, 'problem with recall all')
+            response = error.getResponse(error.UNSPECIFIED, 'problem with list')
         }
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
@@ -110,7 +110,7 @@ function getResponseToQuestion(userId, deviceId, text, attributes, callback) {
                     userId: selectedMemory.UserId,
                     deviceId: selectedMemory.DeviceId,
                     score: selectedMemory.Score,
-                    howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: move to capsule
+                    howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: use locale
                 };
             }
             response.success = true;
@@ -188,16 +188,16 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     }
 }
 
-const getRecallWithPromise = (userId, deviceId) => {
+const getListWithPromise = (userId, deviceId) => {
     return new Promise((resolve, reject) => {
         const callback = (callbackResponse) => {
             resolve(callbackResponse);
         };
-        getRecall(userId, deviceId, callback);
+        getList(userId, deviceId, callback);
     });
 };
 
-function getRecall(userId, deviceId, callback) {
+function getList(userId, deviceId, callback) {
     dbModule.loadMemories(userId, deviceId, (recordedMemories) => {
         let response = {};
         response.answers = [];
@@ -220,7 +220,7 @@ function getRecall(userId, deviceId, callback) {
             response.success = true;
             response.englishDebug = 'There are no memories.';
         }
-        console.log('recall response', response);
+        console.log('list response', response);
         callback(response);
     });
 }
@@ -241,9 +241,9 @@ const handleCmdlineQuestion = async (userId, deviceId, content) => {
     return response.englishDebug;
 };
 
-const handleCmdlineRecall = async (userId, deviceId) => {
-    console.log('recall all');
-    const response = await getRecallWithPromise(userId, deviceId);
+const handleCmdlineList = async (userId, deviceId) => {
+    console.log('list');
+    const response = await getListWithPromise(userId, deviceId);
     console.log('response:', response);
     return response;
 };
@@ -270,12 +270,12 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
         // TODO: implement delete all
     } else if (process.argv.length === 3) {
         const command = process.argv[2];
-        if (command === 'recall') {
-            handleCmdlineRecall(userId, deviceId);
+        if (command === 'list') {
+            handleCmdlineList(userId, deviceId);
             return 0;
         }
     }
 
-    console.log('usage: node index.js [statement|question|recall] "content"');
+    console.log('usage: node index.js [statement|question|list] "content"');
     return 1;
 }
