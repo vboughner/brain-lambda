@@ -9,6 +9,7 @@ const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
+const SERVER_VERSION = '1.0.1'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -56,9 +57,29 @@ exports.handler = async (event) => {
         } else {
             response = error.getResponse(error.EMPTY_QUESTION)
         }
-    } else if (body['delete']) {
-        // TODO: implement delete one, delete some, and delete all
-        return error.getResponse(error.UNSPECIFIED, 'delete is not yet supported')
+    } else if (body['deleteAll']) {
+        console.log('delete all')
+        const completeResponse = await deleteAllWithPromise(userId, deviceId)
+        if (completeResponse) {
+            console.log('completeResponse:', completeResponse)
+            response = {
+                statusCode: 200,
+                body: {
+                    ...completeResponse,
+                },
+            };
+        } else {
+            response = error.getResponse(error.DELETE_ALL_FAILED)
+        }
+    } else if (body['deleteOne']) {
+        const whenStored = body['whenStored']
+        if (whenStored) {
+            console.log('delete one', userId, deviceId, whenStored)
+            // TODO: implement
+            response = error.getResponse(error.UNSPECIFIED, 'deleteOne unsupported')
+        } else {
+            return error.getResponse(error.MISSING_WHEN_STORED)
+        }
     } else if (body['list']) {
         const completeResponse = await getListWithPromise(userId, deviceId)
         console.log('list')
@@ -115,10 +136,12 @@ function getResponseToQuestion(userId, deviceId, text, attributes, callback) {
             }
             response.success = true;
             response.englishDebug = 'You told me ' + response.answers[0].howLongAgo + ': ' + response.answers[0].text + '.';
+            response.serverVersion = SERVER_VERSION;
         }
         else {
             response.success = false;
             response.englishDebug = 'I don\'t have a memory that makes sense as an answer for that.';
+            response.serverVersion = SERVER_VERSION;
         }
         console.log('question response', response);
         callback(response);
@@ -171,10 +194,12 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
                 response.userId = item.UserId;
                 response.deviceId = item.DeviceId;
                 response.englishDebug = 'I will remember that you said: ' + refinedText + '.';
+                response.serverVersion = SERVER_VERSION;
             }
             else {
                 response.success = false;
                 response.englishDebug = 'I am sorry, I had a connection problem and could not store what you said.';
+                response.serverVersion = SERVER_VERSION;
             }
             console.log('statement response', response);
             callback(response);
@@ -183,6 +208,7 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     else {
         response.success = false;
         response.englishDebug = 'Hmmm, I heard you say, ' + text + ', but that didn\'t sound like a memory I could store.';
+        response.serverVersion = SERVER_VERSION;
         console.log('statement response', response);
         callback(response);
     }
@@ -202,25 +228,55 @@ function getList(userId, deviceId, callback) {
         let response = {};
         response.answers = [];
         if (recordedMemories && recordedMemories.length > 0) {
-            for (let i = 0; i < recordedMemories.length; i++) {
+            for (let i = recordedMemories.length - 1; i >= 0; i--) {
                 const selectedMemory = recordedMemories[i];
-                response.answers[i] = {
+                response.answers.push({
                     text: selectedMemory.Text,
                     whenStored: selectedMemory.WhenStored,
                     userId: selectedMemory.UserId,
                     deviceId: selectedMemory.DeviceId,
                     score: selectedMemory.Score,
-                    howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: move to capsule
-                };
+                    howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: use locale
+                });
             }
             response.success = true;
             response.englishDebug = 'You have ' + response.answers.length + (response.answers.length > 1 ? ' memories.' : ' memory');
+            response.serverVersion = SERVER_VERSION;
         }
         else {
             response.success = true;
             response.englishDebug = 'There are no memories.';
+            response.serverVersion = SERVER_VERSION;
         }
         console.log('list response', response);
+        callback(response);
+    });
+}
+
+const deleteAllWithPromise = (userId, deviceId) => {
+    return new Promise((resolve, reject) => {
+        const callback = (callbackResponse) => {
+            resolve(callbackResponse);
+        };
+        deleteAll(userId, deviceId, callback);
+    })
+}
+
+function deleteAll(userId, deviceId, callback) {
+    dbModule.eraseAllMemories(userId, deviceId, (success) => {
+        let response = {
+            userId: userId,
+            deviceId: deviceId,
+        };
+        if (success) {
+            response.success = true;
+            response.englishDebug = 'I deleted all memories.';
+        } else {
+            response.success = false;
+            response.englishDebug = 'There was a problem and I could not delete all memories.';
+        }
+        response.serverVersion = SERVER_VERSION;
+        console.log('delete all response', response);
         callback(response);
     });
 }
@@ -248,6 +304,13 @@ const handleCmdlineList = async (userId, deviceId) => {
     return response;
 };
 
+const handleCmdlineDeleteAll = async (userId, deviceId) => {
+    console.log('delete all');
+    const response = await deleteAllWithPromise(userId, deviceId);
+    console.log('response:', response);
+    return response;
+}
+
 // command line tests use something like this:
 //     node index.js statement 'my birthday is in january'
 //     node index.js question 'my birthday'
@@ -255,8 +318,10 @@ const handleCmdlineList = async (userId, deviceId) => {
 //
 // the following bit of code should only run when we are NOT on the real lambda service
 if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src') !== -1) {
-    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
-    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
+    // const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
+    // const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
+    const userId = 'test';
+    const deviceId = 'cmdline';
     if (process.argv.length === 4) {
         const command = process.argv[2];
         const content = process.argv[3];
@@ -267,15 +332,17 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
             handleCmdlineQuestion(userId, deviceId, content);
             return 0;
         }
-        // TODO: implement delete all
     } else if (process.argv.length === 3) {
         const command = process.argv[2];
         if (command === 'list') {
             handleCmdlineList(userId, deviceId);
             return 0;
+        } else if (command === 'deleteAll') {
+            handleCmdlineDeleteAll(userId, deviceId);
+            return 0;
         }
     }
 
-    console.log('usage: node index.js [statement|question|list] "content"');
+    console.log('usage: node index.js [statement|question|list|deleteAll] ["content"]');
     return 1;
 }

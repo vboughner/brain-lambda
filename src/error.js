@@ -7,6 +7,8 @@ const INCORRECT_CLIENT_AUTH = 1003
 const MISSING_USER_ID = 1004
 const EMPTY_QUESTION = 1005
 const MISSING_API_COMMAND = 1006
+const MISSING_WHEN_STORED = 1007
+const DELETE_ALL_FAILED = 1008
 
 const MESSAGE = {
     [UNSPECIFIED]: 'error with no message yet defined',
@@ -16,6 +18,8 @@ const MESSAGE = {
     [MISSING_USER_ID]: 'missing userId',
     [EMPTY_QUESTION]: 'missing a complete response, maybe it was not a question',
     [MISSING_API_COMMAND]: 'missing a field that specifies which action to take',
+    [MISSING_WHEN_STORED]: 'missing whenStored field to specify which memory',
+    [DELETE_ALL_FAILED]: 'problem during delete all operation',
 }
 
 const getResponse = (errorCode = UNSPECIFIED, overrideErrorMessage = '') => {
@@ -42,6 +46,8 @@ module.exports = {
   MISSING_USER_ID,
   EMPTY_QUESTION,
   MISSING_API_COMMAND,
+  MISSING_WHEN_STORED,
+  DELETE_ALL_FAILED,
   MESSAGE,
   getResponse,
 }
