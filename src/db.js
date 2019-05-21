@@ -132,19 +132,23 @@ function eraseMemoriesByBatch(batchItemArray, index, callback) {
 // call the callback when done, return true if successful, false if not successful
 function eraseAllMemories(userId, deviceId, callback) {
     loadMemories(userId, deviceId, (items) => {
-        let batchItemArray = [];
-        for (let i = 0; i < items.length; i++) {
-            let batchItem = {
-                DeleteRequest: {
-                    Key: {
-                        'UserId': userId,
-                        'WhenStored': items[i].WhenStored
+        if (items && items.length > 0) {
+            let batchItemArray = [];
+            for (let i = 0; i < items.length; i++) {
+                let batchItem = {
+                    DeleteRequest: {
+                        Key: {
+                            'UserId': userId,
+                            'WhenStored': items[i].WhenStored
+                        }
                     }
-                }
-            };
-            batchItemArray.push(batchItem);
+                };
+                batchItemArray.push(batchItem);
+            }
+            eraseMemoriesByBatch(batchItemArray, 0, callback);
+        } else {
+            callback(true);
         }
-        eraseMemoriesByBatch(batchItemArray, 0, callback);
     });
 }
 
