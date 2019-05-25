@@ -28,12 +28,13 @@ exports.handler = async (event) => {
     if (!userId) {
         return error.getResponse(error.MISSING_USER_ID)
     }
+    const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
     const deviceId = body['deviceId'] || 'unknown-device-id'
 
     let response;
     if (body['statement']) {
         let cleanText = wordModule.cleanUpResponseText(body['statement'])
-        const completeResponse = await getStatementResponseWithPromise(userId, deviceId, cleanText)
+        const completeResponse = await getStatementResponseWithPromise(myBrainUserId, deviceId, cleanText)
         console.log('statement:', cleanText)
         console.log('completeResponse:', completeResponse)
         response = {
@@ -44,7 +45,7 @@ exports.handler = async (event) => {
         };
     } else if (body['question']) {
         let cleanText = wordModule.cleanUpResponseText(body['question'])
-        const completeResponse = await getQuestionResponseWithPromise(userId, deviceId, cleanText)
+        const completeResponse = await getQuestionResponseWithPromise(myBrainUserId, deviceId, cleanText)
         console.log('question:', cleanText)
         if (completeResponse) {
             console.log('completeResponse:', completeResponse)
@@ -59,7 +60,7 @@ exports.handler = async (event) => {
         }
     } else if (body['deleteAll']) {
         console.log('delete all')
-        const completeResponse = await deleteAllWithPromise(userId, deviceId)
+        const completeResponse = await deleteAllWithPromise(myBrainUserId, deviceId)
         if (completeResponse) {
             console.log('completeResponse:', completeResponse)
             response = {
@@ -74,14 +75,14 @@ exports.handler = async (event) => {
     } else if (body['deleteOne']) {
         const whenStored = body['whenStored']
         if (whenStored) {
-            console.log('delete one', userId, deviceId, whenStored)
+            console.log('delete one', myBrainUserId, deviceId, whenStored)
             // TODO: implement
             response = error.getResponse(error.UNSPECIFIED, 'deleteOne unsupported')
         } else {
             return error.getResponse(error.MISSING_WHEN_STORED)
         }
     } else if (body['list']) {
-        const completeResponse = await getListWithPromise(userId, deviceId)
+        const completeResponse = await getListWithPromise(myBrainUserId, deviceId)
         console.log('list')
         if (completeResponse) {
             console.log('completeResponse:', completeResponse)
@@ -100,6 +101,21 @@ exports.handler = async (event) => {
 
     return response
 };
+
+const getMyBrainUserIdWithPromise = (assistantUserId) => {
+    return new Promise((resolve, reject) => {
+        const callback = (callbackResponse) => {
+            resolve(callbackResponse);
+        };
+        getMyBrainUserId(assistantUserId, callback);
+    });
+}
+
+function getMyBrainUserId(assistantUserId, callback) {
+    dbModule.getMyBrainUserId(assistantUserId, (myBrainUserId) => {
+        callback(myBrainUserId);
+    });
+}
 
 const getQuestionResponseWithPromise = (userId, deviceId, inputText) => {
     return new Promise((resolve, reject) => {
@@ -282,31 +298,39 @@ function deleteAll(userId, deviceId, callback) {
 }
 
 const handleCmdlineStatement = async (userId, deviceId, content) => {
+    const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
+    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('statement:', cleanText);
-    const response = await getStatementResponseWithPromise(userId, deviceId, cleanText);
+    const response = await getStatementResponseWithPromise(myBrainUserId, deviceId, cleanText);
     console.log('response:', response.englishDebug);
     return response.englishDebug;
 };
 
 const handleCmdlineQuestion = async (userId, deviceId, content) => {
+    const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
+    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('question:', cleanText);
-    const response = await getQuestionResponseWithPromise(userId, deviceId, cleanText);
+    const response = await getQuestionResponseWithPromise(myBrainUserId, deviceId, cleanText);
     console.log('response:', response.englishDebug);
     return response.englishDebug;
 };
 
 const handleCmdlineList = async (userId, deviceId) => {
+    const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
+    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     console.log('list');
-    const response = await getListWithPromise(userId, deviceId);
+    const response = await getListWithPromise(myBrainUserId, deviceId);
     console.log('response:', response);
     return response;
 };
 
 const handleCmdlineDeleteAll = async (userId, deviceId) => {
+    const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
+    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     console.log('delete all');
-    const response = await deleteAllWithPromise(userId, deviceId);
+    const response = await deleteAllWithPromise(myBrainUserId, deviceId);
     console.log('response:', response);
     return response;
 }
@@ -318,10 +342,10 @@ const handleCmdlineDeleteAll = async (userId, deviceId) => {
 //
 // the following bit of code should only run when we are NOT on the real lambda service
 if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src') !== -1) {
-    // const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
-    // const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
-    const userId = 'test';
-    const deviceId = 'cmdline';
+    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
+    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
+    // const userId = 'test';
+    // const deviceId = 'cmdline';
     if (process.argv.length === 4) {
         const command = process.argv[2];
         const content = process.argv[3];

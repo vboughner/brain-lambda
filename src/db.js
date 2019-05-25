@@ -3,12 +3,46 @@
 const awsSDK = require('aws-sdk');
 const docClient = new awsSDK.DynamoDB.DocumentClient({ region: 'us-east-1' });
 const storeTable = 'MyBrainLines';
+const emailTable = 'MyBrainUserIds';
 const maxBatchOperations = 25;    // you get an error with too many batch operations at once
 
 // TODO: Bixby: most of this will be rewritten with promises
 
 // NOTE: if you add a new exported function to this module, or change one of the existing
 // function signatures, you should update the mock-db.js module as well
+
+
+// searches the MyBrainEmails table for an entry for the given assistantUserId, if one is
+// found, it will return the myBrainUserId associated with that assistantUserId, and this
+// new userId should be used in all further queries on the database, if an entry is not
+// found, returns the original assistantUserId, which should be used instead
+function getMyBrainUserId(assistantUserId, callback) {
+    let params = {
+        TableName: emailTable,
+        KeyConditionExpression: '#user = :uId',
+        ExpressionAttributeNames: {
+            '#user': 'AssistantUserId'
+        },
+        ExpressionAttributeValues:  {
+            ':uId': assistantUserId
+        }
+    };
+    // console.log('DEBUG: getting user id with db params = ' + JSON.stringify(params));
+
+    docClient.query(params, function(err, data) {
+        if (err) {
+            console.log('ERROR: could not find myBrainUserId in query operation = ' + JSON.stringify(err, null, 2));
+            callback(assistantUserId);
+        }
+        else {
+            // console.log('DEBUG: returned from query operation = ' + JSON.stringify(data));
+            // data.Items.forEach(function(item) {
+            //     console.log(" -", item.Text);
+            // });
+            callback((data.Items && data.Items.length > 0) ? data.Items[0].BrainUserId : assistantUserId);
+        }
+    });
+}
 
 // load everything from memory in the db for this user,
 // call the callback with the array of data items
@@ -154,6 +188,7 @@ function eraseAllMemories(userId, deviceId, callback) {
 
 // noinspection JSUnresolvedVariable
 module.exports = {
+    getMyBrainUserId: getMyBrainUserId,
     loadMemories: loadMemories,
     storeMemory: storeMemory,
     eraseOneMemory: eraseOneMemory,
