@@ -9,7 +9,7 @@ const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.0.1'
+const SERVER_VERSION = '1.0.2'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
         return error.getResponse(error.MISSING_USER_ID)
     }
     const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
-    const deviceId = body['deviceId'] || 'unknown-device-id'
+    const deviceId = body['deviceId'] || body['deviceModel'] || 'unknown-device-id'
 
     let response;
     if (body['statement']) {
@@ -76,8 +76,18 @@ exports.handler = async (event) => {
         const whenStored = body['whenStored']
         if (whenStored) {
             console.log('delete one', myBrainUserId, deviceId, whenStored)
-            // TODO: implement
-            response = error.getResponse(error.UNSPECIFIED, 'deleteOne unsupported')
+            const completeResponse = await deleteOneWithPromise(myBrainUserId, deviceId, whenStored)
+            if (completeResponse) {
+                console.log('completeResponse:', completeResponse)
+                response = {
+                    statusCode: 200,
+                    body: {
+                        ...completeResponse,
+                    },
+                };
+            } else {
+                response = error.getResponse(error.DELETE_ONE_FAILED)
+            }
         } else {
             return error.getResponse(error.MISSING_WHEN_STORED)
         }
@@ -130,7 +140,6 @@ const getQuestionResponseWithPromise = (userId, deviceId, inputText) => {
 // assumes the input is a question and returns a complete response to the question, with
 // an object that contains all the possible responses, in order from best to worst (or
 // an empty array of answers if there are no matches)
-// TODO: move compilation of response into the capsule, englishDebug is only for debugging
 function getResponseToQuestion(userId, deviceId, text, attributes, callback) {
     let refinedText = wordModule.cutQuestionChatter(text);
 
@@ -151,12 +160,12 @@ function getResponseToQuestion(userId, deviceId, text, attributes, callback) {
                 };
             }
             response.success = true;
-            response.englishDebug = 'You told me ' + response.answers[0].howLongAgo + ': ' + response.answers[0].text + '.';
+            response.speech = 'You told me ' + response.answers[0].howLongAgo + ': ' + response.answers[0].text + '.';
             response.serverVersion = SERVER_VERSION;
         }
         else {
             response.success = false;
-            response.englishDebug = 'I don\'t have a memory that makes sense as an answer for that.';
+            response.speech = 'I don\'t have a memory that makes sense as an answer for that.';
             response.serverVersion = SERVER_VERSION;
         }
         console.log('question response', response);
@@ -195,9 +204,7 @@ const getStatementResponseWithPromise = (userId, deviceId, inputText) => {
     });
 };
 
-// return a response object that contains everything about a state,
-// after storing information
-// TODO: move compilation of response into the capsule, englishDebug is only for debugging
+// return a response object that contains everything about a state, after storing information
 function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     let refinedText = wordModule.cutStatementChatter(text);
     let response = {};
@@ -209,12 +216,12 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
                 response.whenStored = item.WhenStored;
                 response.userId = item.UserId;
                 response.deviceId = item.DeviceId;
-                response.englishDebug = 'I will remember that you said: ' + refinedText + '.';
+                response.speech = 'I will remember that you said: ' + refinedText + '.';
                 response.serverVersion = SERVER_VERSION;
             }
             else {
                 response.success = false;
-                response.englishDebug = 'I am sorry, I had a connection problem and could not store what you said.';
+                response.speech = 'I am sorry, I had a connection problem and could not store what you said.';
                 response.serverVersion = SERVER_VERSION;
             }
             console.log('statement response', response);
@@ -223,7 +230,7 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
     }
     else {
         response.success = false;
-        response.englishDebug = 'Hmmm, I heard you say, ' + text + ', but that didn\'t sound like a memory I could store.';
+        response.speech = 'Hmmm, I heard you say, ' + text + ', but that didn\'t sound like a memory I could store.';
         response.serverVersion = SERVER_VERSION;
         console.log('statement response', response);
         callback(response);
@@ -256,15 +263,48 @@ function getList(userId, deviceId, callback) {
                 });
             }
             response.success = true;
-            response.englishDebug = 'You have ' + response.answers.length + (response.answers.length > 1 ? ' memories.' : ' memory');
+            response.speech = 'You have ' + response.answers.length + (response.answers.length > 1 ? ' memories.' : ' memory');
             response.serverVersion = SERVER_VERSION;
         }
         else {
             response.success = true;
-            response.englishDebug = 'There are no memories.';
+            response.speech = 'There are no memories.';
             response.serverVersion = SERVER_VERSION;
         }
         console.log('list response', response);
+        callback(response);
+    });
+}
+
+const deleteOneWithPromise = (userId, deviceId, whenStored) => {
+    return new Promise((resolve, reject) => {
+        const callback = (callbackResponse) => {
+            resolve(callbackResponse);
+        };
+        deleteOne(userId, deviceId, whenStored, callback);
+    })
+}
+
+function deleteOne(userId, deviceId, whenStored, callback) {
+    const item = {
+        UserId: userId,
+        WhenStored: whenStored,
+    }
+    dbModule.eraseOneMemory(item, (success) => {
+        let response = {
+            userId: userId,
+            deviceId: deviceId,
+            whenStore: whenStored,
+        };
+        if (success) {
+            response.success = true;
+            response.speech = 'I deleted that memory.';
+        } else {
+            response.success = false;
+            response.speech = 'There was a problem and I could not delete that memory.';
+        }
+        response.serverVersion = SERVER_VERSION;
+        console.log('delete one response', response);
         callback(response);
     });
 }
@@ -286,10 +326,10 @@ function deleteAll(userId, deviceId, callback) {
         };
         if (success) {
             response.success = true;
-            response.englishDebug = 'I deleted all memories.';
+            response.speech = 'I deleted all memories.';
         } else {
             response.success = false;
-            response.englishDebug = 'There was a problem and I could not delete all memories.';
+            response.speech = 'There was a problem and I could not delete all memories.';
         }
         response.serverVersion = SERVER_VERSION;
         console.log('delete all response', response);
@@ -303,8 +343,8 @@ const handleCmdlineStatement = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('statement:', cleanText);
     const response = await getStatementResponseWithPromise(myBrainUserId, deviceId, cleanText);
-    console.log('response:', response.englishDebug);
-    return response.englishDebug;
+    console.log('response:', response.speech);
+    return response.speech;
 };
 
 const handleCmdlineQuestion = async (userId, deviceId, content) => {
@@ -313,8 +353,8 @@ const handleCmdlineQuestion = async (userId, deviceId, content) => {
     let cleanText = wordModule.cleanUpResponseText(content);
     console.log('question:', cleanText);
     const response = await getQuestionResponseWithPromise(myBrainUserId, deviceId, cleanText);
-    console.log('response:', response.englishDebug);
-    return response.englishDebug;
+    console.log('response:', response.speech);
+    return response.speech;
 };
 
 const handleCmdlineList = async (userId, deviceId) => {
