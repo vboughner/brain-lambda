@@ -9,7 +9,7 @@ const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.0.2'
+const SERVER_VERSION = '1.0.3'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -216,6 +216,7 @@ function getResponseToStatement(userId, deviceId, text, attributes, callback) {
                 response.whenStored = item.WhenStored;
                 response.userId = item.UserId;
                 response.deviceId = item.DeviceId;
+                response.howLongAgo = timeModule.getHowLongAgoText(Number(item.WhenStored)); // TODO: use locale
                 response.speech = 'I will remember that you said: ' + refinedText + '.';
                 response.serverVersion = SERVER_VERSION;
             }
