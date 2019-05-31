@@ -108,7 +108,7 @@ function eraseOneMemory(item, callback) {
         TableName: storeTable,
         Key: {
             'UserId': item.UserId,
-            'WhenStored': item.WhenStored
+            'WhenStored': item.WhenStored.toString()
         },
     };
     // console.log('DEBUG: deleting with db params = ' + JSON.stringify(params));

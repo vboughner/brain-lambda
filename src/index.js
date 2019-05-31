@@ -295,7 +295,7 @@ function deleteOne(userId, deviceId, whenStored, callback) {
         let response = {
             userId: userId,
             deviceId: deviceId,
-            whenStore: whenStored,
+            whenStored: whenStored,
         };
         if (success) {
             response.success = true;
