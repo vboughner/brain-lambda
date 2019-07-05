@@ -367,6 +367,15 @@ const handleCmdlineList = async (userId, deviceId) => {
     return response;
 };
 
+const handleCmdlineDeleteOne = async (userId, deviceId, content) => {
+    const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
+    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
+    console.log('delete one:', content);
+    const response = await deleteOneWithPromise(myBrainUserId, deviceId, content);
+    console.log('response:', response);
+    return response;
+}
+
 const handleCmdlineDeleteAll = async (userId, deviceId) => {
     const myBrainUserId = await getMyBrainUserIdWithPromise(userId)
     console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
@@ -395,6 +404,9 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
             return 0;
         } else if (command === 'question') {
             handleCmdlineQuestion(userId, deviceId, content);
+            return 0;
+        } else if (command === 'deleteOne') {
+            handleCmdlineDeleteOne(userId, deviceId, content);
             return 0;
         }
     } else if (process.argv.length === 3) {

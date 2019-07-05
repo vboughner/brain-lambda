@@ -1,18 +1,16 @@
 'use strict';
 
-// clean up the text in the response before it is used for anything
+// clean up the text in the response before it is used for anything, we no longer make it lower case here or
+// cut out punctuation, because we want it stored as it appears (later when we are searching, we'll make some
+// adjustments to the question search words, to make them all lower case and strip out punctuation)
 function cleanUpResponseText(text) {
     return text.trim();
-    // return stripPunctuation(text.toLowerCase());
-};
+}
 
 // will be used in order, to trim words from the beginning of questions, order matters, as they will be
 // tried in the order they appear here
 let beginningQuestionChatter = [
     'hello',
-    'good morning',
-    'good afternoon',
-    'good evening',
     'please',
     'can you',
     'will you',
@@ -50,33 +48,10 @@ function cutQuestionChatter(text) {
     return retval;
 }
 
-function startsWithQuestionWord(text) {
-    return (
-        text.startsWith('who') ||
-        text.startsWith('what') ||
-        text.startsWith('when') ||
-        text.startsWith('where') ||
-        text.startsWith('why') ||
-        text.startsWith('how') ||
-        text.startsWith('about') ||
-        text.startsWith('does') ||
-        text.startsWith('do') ||
-        text.startsWith('am') ||
-        text.startsWith('are') ||
-        text.startsWith('is') ||
-        text.startsWith('has') ||
-        text.startsWith('have') ||
-        text.startsWith('did')
-    );
-}
-
 // will be used in order, to trim words from the beginning of statements, order matters, as they will be
 // tried in the order they appear here
 let beginningStatementChatter = [
     'hello',
-    'good morning',
-    'good afternoon',
-    'good evening',
     'please',
     'tell my brain',
     'tell me a brain',
@@ -111,21 +86,9 @@ function cutStatementChatter(text) {
     return retval;
 }
 
-function cutYesNoChatter(text) {
-    return cutStatementChatter(text);
-}
-
-function containsNumWordsOrLess(text, numWords) {
-    let words = text.split(' ');
-    return words.length <= numWords;
-}
-
 // noinspection JSUnresolvedVariable
 module.exports = {
     cleanUpResponseText: cleanUpResponseText,
-    startsWithQuestionWord: startsWithQuestionWord,
-    cutYesNoChatter: cutYesNoChatter,
     cutQuestionChatter: cutQuestionChatter,
     cutStatementChatter: cutStatementChatter,
-    containsNumWordsOrLess: containsNumWordsOrLess
 };

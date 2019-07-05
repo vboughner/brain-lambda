@@ -11,7 +11,8 @@
     "question": "node src/index.js question",
     "statement": "node src/index.js statement",
     "list": "node src/index.js list",
-    "deleteAll": "node src/index.js deleteAll"
+    "deleteAll": "node src/index.js deleteAll",
+    "deleteOne": "node src/index.js deleteOne"
   },
   "repository": {
     "type": "git",
