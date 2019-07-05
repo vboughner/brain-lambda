@@ -53,6 +53,11 @@ function findSignificantWordsInString(s) {
     return result;
 }
 
+// list of words that mean the search was for everything
+const everythingWords = [
+  'all', 'everything'
+]
+
 // expects data in a format where there is an array of objects,
 // the 'Text' attribute of each object is the one to search,
 // and 'WhenStored' is expected to be unique (for this user),
@@ -86,18 +91,26 @@ function searchThruDataForString(data, s) {
     const words = findSignificantWordsInString(nopunc);
     // console.log('DEBUG: significant words are', words)
 
-    for (let i = 0; i < words.length; i++) {
-        // console.log('DEBUG: searching for word === ' + words[i] + ' === and results for that word are');
-        const wordResult = base.search(words[i]);
-        // console.log(wordResult);
-        for (let r = 0; r < wordResult.length; r++) {
-            // put this result somewhere so we can count it
-            if (hashedResults[wordResult[r].WhenStored]) {
-                hashedResults[wordResult[r].WhenStored].Score++;
-            }
-            else {
-                hashedResults[wordResult[r].WhenStored] = wordResult[r];
-                hashedResults[wordResult[r].WhenStored].Score = 1;
+    // if this actually looks like a request for everything, feed all results back
+    if (data && (words.length === 0 || (words.length === 1 && everythingWords.indexOf(words[0]) !== -1))) {
+        for (let i = 0; i < data.length; i++) {
+            hashedResults[data[i].WhenStored] = data[i];
+            hashedResults[data[i].WhenStored].Score = 1;
+        }
+    } else {
+        // otherwise search for significant words in every entry and keep score for every word
+        for (let i = 0; i < words.length; i++) {
+            // console.log('DEBUG: searching for word === ' + words[i] + ' === and results for that word are');
+            const wordResult = base.search(words[i]);
+            // console.log(wordResult);
+            for (let r = 0; r < wordResult.length; r++) {
+                // put this result somewhere so we can count it
+                if (hashedResults[wordResult[r].WhenStored]) {
+                    hashedResults[wordResult[r].WhenStored].Score++;
+                } else {
+                    hashedResults[wordResult[r].WhenStored] = wordResult[r];
+                    hashedResults[wordResult[r].WhenStored].Score = 1;
+                }
             }
         }
     }
