@@ -6,10 +6,11 @@ const searchModule = require('./search')
 const dbModule = require('./db')
 const timeModule = require('./time')
 const error = require('./error.js')
+const packageJson = require('../package.json') // use top-level package.json file for server version
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.0.4'
+const SERVER_VERSION = packageJson.version
 
 exports.handler = async (event) => {
     const body = event['body-json']
