@@ -6,15 +6,6 @@ function cleanUpResponseText(text) {
     // return stripPunctuation(text.toLowerCase());
 };
 
-// strip out punctuation and double-spaces (probably only important for command line testing,
-// because does the skill's literal slot really ever return any punctuation?)
-// thanks go to this stack overflow answer: https://stackoverflow.com/a/4328722/5828789
-function stripPunctuation(text) {
-    // noinspection RegExpRedundantEscape
-    let withoutPunctuation = text.replace(/[\!\?.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
-    return withoutPunctuation.replace(/\s{2,}/g,' ');  // removes extra spaces left in after removals
-}
-
 // will be used in order, to trim words from the beginning of questions, order matters, as they will be
 // tried in the order they appear here
 let beginningQuestionChatter = [

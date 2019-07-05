@@ -15,6 +15,15 @@ const fuseSearchOptions = {
     minMatchCharLength: minWordLength,
 };
 
+// strip out punctuation and double-spaces (probably only important for command line testing,
+// because does the skill's literal slot really ever return any punctuation?)
+// thanks go to this stack overflow answer: https://stackoverflow.com/a/4328722/5828789
+function stripPunctuation(text) {
+    // noinspection RegExpRedundantEscape
+    let withoutPunctuation = text.replace(/[\!\?.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+    return withoutPunctuation.replace(/\s{2,}/g,' ');  // removes extra spaces left in after removals
+}
+
 // list of words to ignore in search strings
 const ignoreWords = [
     'who', 'what', 'where', 'why', 'how', 'when', 'many', 'much',
@@ -29,7 +38,7 @@ const ignoreWords = [
 //     - remove ignored words from the results
 function findSignificantWordsInString(s) {
     let result = [];
-    let initial = s.split(' ');
+    const initial = s.split(' ');
     for (let i = 0; i < initial.length; i++) {
         if (initial[i].length >= minWordLength) {
             let consider = initial[i];
@@ -68,17 +77,18 @@ function findSignificantWordsInString(s) {
 // and that will be placed as the first element of the returned array of results.
 function searchThruDataForString(data, s) {
     let hashedResults = {};
-    s = s.toLowerCase();
-    // console.log('DEBUG: searching through data for string "' + s +  '"');
+    const nopunc = stripPunctuation(s.toLowerCase())
+    // console.log('DEBUG: searching through data for string "' + nopunc +  '"');
 
-    let base = new Fuse(data, fuseSearchOptions);
+    const base = new Fuse(data, fuseSearchOptions);
 
     // divide up the string into significant words and search for each of these individually
-    let words = findSignificantWordsInString(s);
+    const words = findSignificantWordsInString(nopunc);
+    // console.log('DEBUG: significant words are', words)
 
     for (let i = 0; i < words.length; i++) {
         // console.log('DEBUG: searching for word === ' + words[i] + ' === and results for that word are');
-        let wordResult = base.search(words[i]);
+        const wordResult = base.search(words[i]);
         // console.log(wordResult);
         for (let r = 0; r < wordResult.length; r++) {
             // put this result somewhere so we can count it
@@ -100,7 +110,7 @@ function searchThruDataForString(data, s) {
         }
     }
     sortedResults.sort(function (a, b) {
-        let score = b.Score - a.Score;
+        const score = b.Score - a.Score;
         if (score === 0) {
             return b.WhenStored - a.WhenStored;
         }
