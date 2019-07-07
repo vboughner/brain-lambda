@@ -9,7 +9,7 @@ const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.0.4'
+const SERVER_VERSION = '1.0.5'
 
 exports.handler = async (event) => {
     const body = event['body-json']
