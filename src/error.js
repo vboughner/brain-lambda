@@ -50,6 +50,7 @@ module.exports = {
   MISSING_API_COMMAND,
   MISSING_WHEN_STORED,
   DELETE_ALL_FAILED,
+  DELETE_ONE_FAILED,
   MESSAGE,
   getResponse,
 }

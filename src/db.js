@@ -6,126 +6,123 @@ const storeTable = 'MyBrainLines';
 const emailTable = 'MyBrainUserIds';
 const maxBatchOperations = 25;    // you get an error with too many batch operations at once
 
-// TODO: Bixby: most of this will be rewritten with promises
-
-// NOTE: if you add a new exported function to this module, or change one of the existing
-// function signatures, you should update the mock-db.js module as well
-
-
 // searches the MyBrainEmails table for an entry for the given assistantUserId, if one is
 // found, it will return the myBrainUserId associated with that assistantUserId, and this
 // new userId should be used in all further queries on the database, if an entry is not
 // found, returns the original assistantUserId, which should be used instead
-function getMyBrainUserId(assistantUserId, callback) {
-    let params = {
-        TableName: emailTable,
-        KeyConditionExpression: '#user = :uId',
-        ExpressionAttributeNames: {
-            '#user': 'AssistantUserId'
-        },
-        ExpressionAttributeValues:  {
-            ':uId': assistantUserId
-        }
-    };
-    // console.log('DEBUG: getting user id with db params = ' + JSON.stringify(params));
+async function getMyBrainUserId(assistantUserId) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: emailTable,
+            KeyConditionExpression: '#user = :uId',
+            ExpressionAttributeNames: {
+                '#user': 'AssistantUserId'
+            },
+            ExpressionAttributeValues: {
+                ':uId': assistantUserId
+            }
+        };
+        // console.log('DEBUG: getting user id with db params = ' + JSON.stringify(params));
 
-    docClient.query(params, function(err, data) {
-        if (err) {
-            console.log('ERROR: could not find myBrainUserId in query operation = ' + JSON.stringify(err, null, 2));
-            callback(assistantUserId);
-        }
-        else {
-            // console.log('DEBUG: returned from query operation = ' + JSON.stringify(data));
-            // data.Items.forEach(function(item) {
-            //     console.log(" -", item.Text);
-            // });
-            callback((data.Items && data.Items.length > 0) ? data.Items[0].BrainUserId : assistantUserId);
-        }
+        docClient.query(params, function (err, data) {
+            if (err) {
+                console.log('ERROR: could not find myBrainUserId in query operation = ' + JSON.stringify(err, null, 2));
+                resolve(assistantUserId);
+            } else {
+                // console.log('DEBUG: returned from query operation = ' + JSON.stringify(data));
+                // data.Items.forEach(function(item) {
+                //     console.log(" -", item.Text);
+                // });
+                resolve((data.Items && data.Items.length > 0) ? data.Items[0].BrainUserId : assistantUserId);
+            }
+        });
     });
 }
 
-// load everything from memory in the db for this user,
-// call the callback with the array of data items
-function loadMemories(userId, deviceId, callback) {
-    let params = {
-        TableName: storeTable,
-        KeyConditionExpression: '#user = :uId',
-        ExpressionAttributeNames: {
-            '#user': 'UserId'
-        },
-        ExpressionAttributeValues:  {
-            ':uId': userId
-        }
-    };
-    // console.log('DEBUG: reading with db params = ' + JSON.stringify(params));
+// load everything from memory in the db for this user, returns the array of data items
+async function loadMemories(userId, deviceId) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: storeTable,
+            KeyConditionExpression: '#user = :uId',
+            ExpressionAttributeNames: {
+                '#user': 'UserId'
+            },
+            ExpressionAttributeValues:  {
+                ':uId': userId
+            }
+        };
+        // console.log('DEBUG: reading with db params = ' + JSON.stringify(params));
 
-    docClient.query(params, function(err, data) {
-        if (err) {
-            console.log('ERROR: problem in query operation = ' + JSON.stringify(err, null, 2));
-            callback([]);
-        }
-        else {
-            // console.log('DEBUG: returned from query operation = ' + JSON.stringify(data));
-            // data.Items.forEach(function(item) {
-            //     console.log(" -", item.Text);
-            // });
-            callback(data.Items);
-        }
-    });
+        docClient.query(params, function(err, data) {
+            if (err) {
+                console.log('ERROR: problem in query operation = ' + JSON.stringify(err, null, 2));
+                resolve([]);
+            }
+            else {
+                // console.log('DEBUG: returned from query operation = ' + JSON.stringify(data));
+                // data.Items.forEach(function(item) {
+                //     console.log(" -", item.Text);
+                // });
+                resolve(data.Items);
+            }
+        });
+    })
 }
 
-// store a line of text in the db. call the callback when done, returns an object describing what was stored,
+// store a line of text in the db, returns an object describing what was stored,
 // or null if not successfully stored
-function storeMemory(userId, deviceId, text, callback) {
-    let when = Date.now().toString();
-    let params = {
-        TableName: storeTable,
-        Item: {
-            UserId: userId,
-            DeviceId: deviceId,
-            WhenStored: when,
-            Text: text
-        }
-    };
-    // console.log('DEBUG: storing with db params = ' + JSON.stringify(params));
+async function storeMemory(userId, deviceId, text) {
+    return new Promise((resolve, reject) => {
+        let when = Date.now().toString();
+        let params = {
+            TableName: storeTable,
+            Item: {
+                UserId: userId,
+                DeviceId: deviceId,
+                WhenStored: when,
+                Text: text
+            }
+        };
+        // console.log('DEBUG: storing with db params = ' + JSON.stringify(params));
 
-    // noinspection JSUnusedLocalSymbols
-    docClient.put(params, function(err, data) {
-        if (err) {
-            console.log('ERROR: problem in put operation = ' + JSON.stringify(err));
-            callback(null);
-        }
-        else {
-            callback(params.Item);
-        }
+        // noinspection JSUnusedLocalSymbols
+        docClient.put(params, function (err, data) {
+            if (err) {
+                console.log('ERROR: problem in put operation = ' + JSON.stringify(err));
+                resolve(null);
+            } else {
+                resolve(params.Item);
+            }
+        });
     });
 }
 
 // remove one memory from the database, given the original item object made when recalling it,
-// call the callback when done, return true if successful, false if not successful
-function eraseOneMemory(item, callback) {
-    let params = {
-        TableName: storeTable,
-        Key: {
-            'UserId': item.UserId,
-            'WhenStored': item.WhenStored.toString()
-        },
-    };
-    // console.log('DEBUG: deleting with db params = ' + JSON.stringify(params));
+// return true if successful, false if not successful
+async function eraseOneMemory(item) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: storeTable,
+            Key: {
+                'UserId': item.UserId,
+                'WhenStored': item.WhenStored.toString()
+            },
+        };
+        // console.log('DEBUG: deleting with db params = ' + JSON.stringify(params));
 
-    // noinspection JSUnusedLocalSymbols
-    docClient.delete(params, function(err, data) {
-        if (err) {
-            console.log('ERROR: problem in delete operation = ' + JSON.stringify(err));
-            callback(false);
-        }
-        else {
-            // console.log('delete succeeded ', JSON.stringify(data, null, 2));
-            callback(true);
-        }
+        // noinspection JSUnusedLocalSymbols
+        docClient.delete(params, function (err, data) {
+            if (err) {
+                console.log('ERROR: problem in delete operation = ' + JSON.stringify(err));
+                resolve(false);
+            } else {
+                // console.log('delete succeeded ', JSON.stringify(data, null, 2));
+                resolve(true);
+            }
+        });
     });
 }
-
 
 // remove memories in this batch, starting at index, until they are all done,
 // eventually calling the given callback method
@@ -162,28 +159,36 @@ function eraseMemoriesByBatch(batchItemArray, index, callback) {
     });
 }
 
+// remove memories given in the batchItemArray, using batches, until they are all gone
+async function eraseMemoriesByBatchWithPromise(batchItemArray) {
+    return new Promise((resolve, reject) => {
+        const callback = (callbackResponse) => {
+            resolve(callbackResponse);
+        };
+        eraseMemoriesByBatch(batchItemArray, 0, callback);
+    });
+}
+
 // remove all memories for a user from the database,
 // call the callback when done, return true if successful, false if not successful
-function eraseAllMemories(userId, deviceId, callback) {
-    loadMemories(userId, deviceId, (items) => {
-        if (items && items.length > 0) {
-            let batchItemArray = [];
-            for (let i = 0; i < items.length; i++) {
-                let batchItem = {
-                    DeleteRequest: {
-                        Key: {
-                            'UserId': userId,
-                            'WhenStored': items[i].WhenStored
-                        }
+async function eraseAllMemories(userId, deviceId) {
+    const items = await loadMemories(userId, deviceId);
+    if (items && items.length > 0) {
+        let batchItemArray = [];
+        for (let i = 0; i < items.length; i++) {
+            let batchItem = {
+                DeleteRequest: {
+                    Key: {
+                        'UserId': userId,
+                        'WhenStored': items[i].WhenStored
                     }
-                };
-                batchItemArray.push(batchItem);
-            }
-            eraseMemoriesByBatch(batchItemArray, 0, callback);
-        } else {
-            callback(true);
+                }
+            };
+            batchItemArray.push(batchItem);
         }
-    });
+        await eraseMemoriesByBatchWithPromise(batchItemArray);
+    }
+    return true;
 }
 
 // noinspection JSUnresolvedVariable
