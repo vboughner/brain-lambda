@@ -167,7 +167,7 @@ function selectBestMemoriesForQuestion(memories, question) {
     }
 }
 
-// return a response object that contains everything about a state, after storing information
+// returns a response object that contains everything about a statement, after storing information
 async function getResponseToStatement(userId, deviceId, text) {
     let refinedText = wordModule.cutStatementChatter(text);
     let response = {};
