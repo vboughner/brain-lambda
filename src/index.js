@@ -9,18 +9,23 @@ const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.0.5'
+const SERVER_VERSION = '1.0.6'
 
 exports.handler = async (event) => {
     const body = event['body-json']
     if (!body) {
         return error.getResponse(error.MISSING_BODY)
     }
+    const request = {
+        ...body,
+        secretClientApiKey: 'redacted',
+    }
+    console.log('request:', JSON.stringify(request, null, 2))
+
     const clientVersion = body['clientVersion']
     if (!clientVersion || !semver.satisfies(clientVersion, CLIENT_VERSION_SEMVER_SATISFIES)) {
         return error.getResponse(error.INCORRECT_CLIENT_VERSION)
     }
-    console.log('clientVersion', clientVersion, 'satisfies semver:', CLIENT_VERSION_SEMVER_SATISFIES)
     if (!SECRET_CLIENT_API_KEY || SECRET_CLIENT_API_KEY !== body['secretClientApiKey']) {
         return error.getResponse(error.INCORRECT_CLIENT_AUTH)
     }
@@ -30,87 +35,51 @@ exports.handler = async (event) => {
     }
     const myBrainUserId = await dbModule.getMyBrainUserId(userId);
     const deviceId = body['deviceId'] || body['deviceModel'] || 'unknown-device-id'
+    console.log('myBrainUserId is', myBrainUserId, 'and deviceId is', deviceId)
 
     let response;
     if (body['statement']) {
         let cleanText = wordModule.cleanUpResponseText(body['statement'])
         const completeResponse = await getResponseToStatement(myBrainUserId, deviceId, cleanText)
-        console.log('statement:', cleanText)
-        console.log('completeResponse:', completeResponse)
-        response = {
-            statusCode: 200,
-            body: {
-                ...completeResponse,
-            },
-        };
+        response = wrap(completeResponse)
     } else if (body['question']) {
         let cleanText = wordModule.cleanUpResponseText(body['question'])
         const completeResponse = await getResponseToQuestion(myBrainUserId, deviceId, cleanText)
-        console.log('question:', cleanText)
-        if (completeResponse) {
-            console.log('completeResponse:', completeResponse)
-            response = {
-                statusCode: 200,
-                body: {
-                    ...completeResponse,
-                },
-            };
-        } else {
-            response = error.getResponse(error.EMPTY_QUESTION)
-        }
+        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.EMPTY_QUESTION)
     } else if (body['deleteAll']) {
-        console.log('delete all')
         const completeResponse = await deleteAll(myBrainUserId, deviceId)
-        if (completeResponse) {
-            console.log('completeResponse:', completeResponse)
-            response = {
-                statusCode: 200,
-                body: {
-                    ...completeResponse,
-                },
-            };
-        } else {
-            response = error.getResponse(error.DELETE_ALL_FAILED)
-        }
+        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ALL_FAILED)
     } else if (body['deleteOne']) {
         const whenStored = body['whenStored']
         if (whenStored) {
-            console.log('delete one', myBrainUserId, deviceId, whenStored)
             const completeResponse = await deleteOne(myBrainUserId, deviceId, whenStored)
-            if (completeResponse) {
-                console.log('completeResponse:', completeResponse)
-                response = {
-                    statusCode: 200,
-                    body: {
-                        ...completeResponse,
-                    },
-                };
-            } else {
-                response = error.getResponse(error.DELETE_ONE_FAILED)
-            }
+            response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ONE_FAILED)
         } else {
             return error.getResponse(error.MISSING_WHEN_STORED)
         }
     } else if (body['list']) {
         const completeResponse = await getList(myBrainUserId, deviceId)
-        console.log('list')
-        if (completeResponse) {
-            console.log('completeResponse:', completeResponse)
-            response = {
-                statusCode: 200,
-                body: {
-                    ...completeResponse,
-                },
-            };
-        } else {
-            response = error.getResponse(error.UNSPECIFIED, 'problem with list')
-        }
+        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with list')
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
     }
 
+    console.log('response:', JSON.stringify(response, null, 2))
     return response
 };
+
+// returns a response wrapped in a success code, if it was successful
+function wrap(completeResponse) {
+    if (completeResponse) {
+        return {
+            statusCode: 200,
+            body: {
+                ...completeResponse,
+            },
+        };
+    }
+    return completeResponse
+}
 
 // assumes the input is a question and returns a complete response to the question, with
 // an object that contains all the possible responses, in order from best to worst (or
@@ -142,7 +111,6 @@ async function getResponseToQuestion(userId, deviceId, text) {
         response.speech = 'I don\'t have a memory that makes sense as an answer for that.';
         response.serverVersion = SERVER_VERSION;
     }
-    console.log('question response', response);
     return response;
 }
 
@@ -153,7 +121,6 @@ function selectBestMemoriesForQuestion(memories, question) {
     if (memories && memories.length > 0) {
         // search for the right memory using words from the question
         let results = searchModule.searchThruDataForString(memories, question);
-        // console.log('RESULTS\n', results);
 
         if (results && results.length > 0) {
             return results;
@@ -188,14 +155,12 @@ async function getResponseToStatement(userId, deviceId, text) {
             response.speech = 'I am sorry, I had a connection problem and could not store what you said.';
             response.serverVersion = SERVER_VERSION;
         }
-        console.log('statement response', response);
         return response;
     }
     else {
         response.success = false;
         response.speech = 'Hmmm, I heard you say, ' + text + ', but that didn\'t sound like a memory I could store.';
         response.serverVersion = SERVER_VERSION;
-        console.log('statement response', response);
         return response;
     }
 }
@@ -225,7 +190,6 @@ async function getList(userId, deviceId) {
         response.speech = 'There are no memories.';
         response.serverVersion = SERVER_VERSION;
     }
-    console.log('list response', response);
     return response;
 }
 
@@ -248,7 +212,6 @@ async function deleteOne(userId, deviceId, whenStored) {
         response.speech = 'There was a problem and I could not delete that memory.';
     }
     response.serverVersion = SERVER_VERSION;
-    console.log('delete one response', response);
     return response;
 }
 
@@ -266,7 +229,6 @@ async function deleteAll(userId, deviceId) {
         response.speech = 'There was a problem and I could not delete all memories.';
     }
     response.serverVersion = SERVER_VERSION;
-    console.log('delete all response', response);
     return response;
 }
 
@@ -324,10 +286,8 @@ const handleCmdlineDeleteAll = async (userId, deviceId) => {
 //
 // the following bit of code should only run when we are NOT on the real lambda service
 if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src') !== -1) {
-    const userId = 'amzn1.ask.account.AG5EEHSAI6AZCQB67LMCVNNPQWF5HRK2H2BHPZQLW7LLRBKE5ZGPIA3OM6RIDYKOJHEO7O5G5YDFQHKXHCQ76CYA2G2P3DIU4PESC6TRUSN7QBSBSS2IBJ6PSKWY7NRZ6M6PFKM56VQ73LSZXXKJP3L27BYZ7JLDA24XRCDGWSKYLBEODZYHDYPAOFHQLUKJUQRGPIWSFRZ3T5Y';
-    const deviceId = 'amzn1.ask.device.AGTSDQPG6KU7ICG5IFRYZXGVK6MGSSVEPGOWY5UQJRSIC63B46S6PZSAYANRECWK73GPHKMBM6TPAE6ZD5FXHUAZOZPCXFOLF2EGDUJRFJLKJC3E24DG53EVGPEK5QXNQ34MUU6IDQ7DAYL4QIPEVX3QOCEQ';
-    // const userId = 'test';
-    // const deviceId = 'cmdline';
+    const userId = 'test';
+    const deviceId = 'cmdline';
     if (process.argv.length === 4) {
         const command = process.argv[2];
         const content = process.argv[3];
