@@ -3,6 +3,7 @@
 const semver = require('semver')
 const wordModule = require('./word')
 const searchModule = require('./search')
+const reportModule = require('./report')
 const dbModule = require('./db')
 const timeModule = require('./time')
 const error = require('./error.js')
@@ -10,6 +11,9 @@ const error = require('./error.js')
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
 const SERVER_VERSION = '1.1.0'
+
+// TODO: add action types for the rest and migrate clients to use them (and a single REST endpoint)
+const ACTION_GET_REPORT = 'get-report'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -35,7 +39,8 @@ exports.handler = async (event) => {
     }
     const myBrainUserId = await dbModule.getMyBrainUserId(userId);
     const deviceId = body['deviceId'] || body['deviceModel'] || 'unknown-device-id'
-    console.log('myBrainUserId is', myBrainUserId, 'and deviceId is', deviceId)
+    const actionType = body['actionType'] || 'unknown-action-type'
+    console.log('myBrainUserId is', myBrainUserId, ', deviceId is', deviceId, ', and actionType is', actionType)
 
     let response;
     if (body['statement']) {
@@ -60,6 +65,9 @@ exports.handler = async (event) => {
     } else if (body['list']) {
         const completeResponse = await getList(myBrainUserId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with list')
+    } else if (actionType === ACTION_GET_REPORT) {
+        const completeResponse = await getReport()
+        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
     }
@@ -232,6 +240,26 @@ async function deleteAll(userId, deviceId) {
     return response;
 }
 
+async function getReport(userId, deviceId) {
+    let response
+    const report = await reportModule.compileReport(userId, deviceId)
+    if (report) {
+        response = {
+            success: true,
+            speech: 'Here is the report you requested.',
+            serverVersion: SERVER_VERSION,
+            report: report,
+        }
+    } else {
+        response = {
+            success: false,
+            speech: 'Could not get the report.',
+            serverVersion: SERVER_VERSION,
+        }
+    }
+    return response;
+}
+
 const handleCmdlineStatement = async (userId, deviceId, content) => {
     const myBrainUserId = await dbModule.getMyBrainUserId(userId)
     console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
@@ -257,7 +285,7 @@ const handleCmdlineList = async (userId, deviceId) => {
     console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     console.log('list');
     const response = await getList(myBrainUserId, deviceId);
-    console.log('response:', response);
+    console.log('response:', JSON.stringify(response, null, 2));
     return response;
 };
 
@@ -266,7 +294,7 @@ const handleCmdlineDeleteOne = async (userId, deviceId, content) => {
     console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     console.log('delete one:', content);
     const response = await deleteOne(myBrainUserId, deviceId, content);
-    console.log('response:', response);
+    console.log('response:', JSON.stringify(response, null, 2));
     return response;
 }
 
@@ -275,7 +303,15 @@ const handleCmdlineDeleteAll = async (userId, deviceId) => {
     console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
     console.log('delete all');
     const response = await deleteAll(myBrainUserId, deviceId);
-    console.log('response:', response);
+    console.log('response:', JSON.stringify(response, null, 2));
+    return response;
+}
+
+const handleCmdlineReport = async (userId, deviceId) => {
+    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
+    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
+    const response = await getReport(myBrainUserId, deviceId);
+    console.log('response:', JSON.stringify(response, null, 2));
     return response;
 }
 
@@ -309,9 +345,12 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
         } else if (command === 'deleteAll') {
             handleCmdlineDeleteAll(userId, deviceId);
             return 0;
+        } else if (command === 'report') {
+            handleCmdlineReport(userId, deviceId);
+            return 0;
         }
     }
 
-    console.log('usage: node index.js [statement|question|list|deleteAll] ["content"]');
+    console.log('usage: node index.js [statement|question|list|deleteAll|report] ["content"]');
     return 1;
 }

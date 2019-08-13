@@ -10,6 +10,7 @@ const MISSING_API_COMMAND = 1006
 const MISSING_WHEN_STORED = 1007
 const DELETE_ALL_FAILED = 1008
 const DELETE_ONE_FAILED = 1009
+const REPORT_FAILED = 1010
 
 const MESSAGE = {
     [UNSPECIFIED]: 'error with no message yet defined',
@@ -22,6 +23,7 @@ const MESSAGE = {
     [MISSING_WHEN_STORED]: 'missing whenStored field to specify which memory',
     [DELETE_ALL_FAILED]: 'problem during delete all operation',
     [DELETE_ONE_FAILED]: 'problem during delete one operation',
+    [REPORT_FAILED]: 'problem during report operation',
 }
 
 const getResponse = (errorCode = UNSPECIFIED, overrideErrorMessage = '') => {
@@ -41,16 +43,17 @@ const getResponse = (errorCode = UNSPECIFIED, overrideErrorMessage = '') => {
 
 // noinspection JSUnresolvedVariable
 module.exports = {
-  UNSPECIFIED,
-  MISSING_BODY,
-  INCORRECT_CLIENT_VERSION,
-  INCORRECT_CLIENT_AUTH,
-  MISSING_USER_ID,
-  EMPTY_QUESTION,
-  MISSING_API_COMMAND,
-  MISSING_WHEN_STORED,
-  DELETE_ALL_FAILED,
-  DELETE_ONE_FAILED,
-  MESSAGE,
-  getResponse,
+    UNSPECIFIED,
+    MISSING_BODY,
+    INCORRECT_CLIENT_VERSION,
+    INCORRECT_CLIENT_AUTH,
+    MISSING_USER_ID,
+    EMPTY_QUESTION,
+    MISSING_API_COMMAND,
+    MISSING_WHEN_STORED,
+    DELETE_ALL_FAILED,
+    DELETE_ONE_FAILED,
+    MESSAGE,
+    REPORT_FAILED,
+    getResponse,
 }

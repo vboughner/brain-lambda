@@ -191,11 +191,46 @@ async function eraseAllMemories(userId, deviceId) {
     return true;
 }
 
+// scans the table and loads EVERYTHING, should be used sparingly because it consumes resources,
+// should be used for infrequently created reports (maybe daily), and not for routine user queries,
+// returns an array of all rows, returns null when there is an error
+async function loadEverything() {
+    return new Promise((resolve, reject) => {
+        let returnedRows = []
+        let params = {
+            TableName: storeTable,
+        }
+
+        // console.log('DEBUG: scanning with db params = ' + JSON.stringify(params, null, 2));
+        docClient.scan(params, onScan)
+
+        function onScan(err, data) {
+            if (err) {
+                console.log('ERROR: problem in scan operation = ' + JSON.stringify(err, null, 2));
+                resolve(null)
+            } else {
+                // console.log('DEBUG: scan succeeded, num items was', data.Items.length)
+                data.Items.forEach((memory) => returnedRows.push(memory))
+
+                // continue scanning if we have more, each scan can retrieve a maximum of only 1MB of data
+                if (typeof data.LastEvaluatedKey != "undefined") {
+                    // console.log("DEBUG: scanning for more...")
+                    params.ExclusiveStartKey = data.LastEvaluatedKey
+                    docClient.scan(params, onScan)
+                } else {
+                    resolve(returnedRows)
+                }
+            }
+        }
+    })
+}
+
 // noinspection JSUnresolvedVariable
 module.exports = {
     getMyBrainUserId: getMyBrainUserId,
     loadMemories: loadMemories,
     storeMemory: storeMemory,
     eraseOneMemory: eraseOneMemory,
-    eraseAllMemories: eraseAllMemories
+    eraseAllMemories: eraseAllMemories,
+    loadEverything: loadEverything,
 };
