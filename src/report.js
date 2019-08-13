@@ -18,6 +18,7 @@ async function compileReport(userId, deviceId) {
     const numTotalMemories = everything.length
     const userToMemoryMap = new Map()
     let maxMemoriesOnOneUser = 1
+    let maxMemoriesOnOneUserId = ''
     let oldestMemoryTimestamp = currentTimestamp
     let newestMemoryTimestamp = 0
 
@@ -25,7 +26,10 @@ async function compileReport(userId, deviceId) {
         const list = userToMemoryMap.get(memory.UserId)
         if (list) {
             list.push(memory)
-            maxMemoriesOnOneUser = Math.max(maxMemoriesOnOneUser, list.length)
+            if (list.length > maxMemoriesOnOneUser) {
+                maxMemoriesOnOneUser = list.length
+                maxMemoriesOnOneUserId = memory.UserId
+            }
         } else {
             userToMemoryMap.set(memory.UserId, [memory])
         }
@@ -36,18 +40,25 @@ async function compileReport(userId, deviceId) {
     const numUniqueUsers = userToMemoryMap.size
     const averageMemoriesPerUser = Math.round(numTotalMemories / numUniqueUsers * 100) / 100
 
+    // uncomment momentarily to check for abuse from a user with too many memories
+    // const maxMemoryUserList = userToMemoryMap.get(maxMemoriesOnOneUserId)
+    // const maxMemoryUserMemories = []
+    // maxMemoryUserList.forEach((memory) => maxMemoryUserMemories.push(memory.Text))
+    // console.log('max user list of memories', JSON.stringify(maxMemoryUserMemories, null, 2))
+
     return {
-        userId,
-        deviceId,
         currentTimestamp,
         numTotalMemories,
         numUniqueUsers,
         averageMemoriesPerUser,
         maxMemoriesOnOneUser,
+        maxMemoriesOnOneUserId,
         oldestMemoryTimestamp,
         oldestMemoryTimeAgo: timeModule.getHowLongAgoText(Number(oldestMemoryTimestamp)),
         newestMemoryTimestamp,
         newestMemoryTimeAgo: timeModule.getHowLongAgoText(Number(newestMemoryTimestamp)),
+        reportRequestedByUserId: userId,
+        reportRequestedByDeviceId: deviceId,
     }
 }
 
