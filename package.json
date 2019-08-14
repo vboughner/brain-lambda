@@ -1,6 +1,6 @@
 {
   "name": "brain-lambda",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "My Brain lambda for interacting with Bixby Capsule",
   "main": "index.js",
   "scripts": {

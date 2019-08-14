@@ -9,8 +9,9 @@ const timeModule = require('./time')
 const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
+const REPORT_GENERATION_API_KEY = process.env['REPORT_GENERATION_API_KEY'] // may only generate reports
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.1.0'
+const SERVER_VERSION = '1.1.1'
 
 // TODO: add action types for the rest and migrate clients to use them (and a single REST endpoint)
 const ACTION_GET_REPORT = 'get-report'
@@ -27,10 +28,13 @@ exports.handler = async (event) => {
     console.log('request:', JSON.stringify(request, null, 2))
 
     const clientVersion = body['clientVersion']
+    let onlyReportGenerationAllowed = false
     if (!clientVersion || !semver.satisfies(clientVersion, CLIENT_VERSION_SEMVER_SATISFIES)) {
         return error.getResponse(error.INCORRECT_CLIENT_VERSION)
     }
-    if (!SECRET_CLIENT_API_KEY || SECRET_CLIENT_API_KEY !== body['secretClientApiKey']) {
+    if (REPORT_GENERATION_API_KEY && REPORT_GENERATION_API_KEY === body['reportGenerationApiKey']) {
+        onlyReportGenerationAllowed = true
+    } else if (!SECRET_CLIENT_API_KEY || SECRET_CLIENT_API_KEY !== body['secretClientApiKey']) {
         return error.getResponse(error.INCORRECT_CLIENT_AUTH)
     }
     const userId = body['userId']
@@ -43,33 +47,41 @@ exports.handler = async (event) => {
     console.log('myBrainUserId is', myBrainUserId, ', deviceId is', deviceId, ', and actionType is', actionType)
 
     let response;
-    if (body['statement']) {
-        let cleanText = wordModule.cleanUpResponseText(body['statement'])
-        const completeResponse = await getResponseToStatement(myBrainUserId, deviceId, cleanText)
-        response = wrap(completeResponse)
-    } else if (body['question']) {
-        let cleanText = wordModule.cleanUpResponseText(body['question'])
-        const completeResponse = await getResponseToQuestion(myBrainUserId, deviceId, cleanText)
-        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.EMPTY_QUESTION)
-    } else if (body['deleteAll']) {
-        const completeResponse = await deleteAll(myBrainUserId, deviceId)
-        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ALL_FAILED)
-    } else if (body['deleteOne']) {
-        const whenStored = body['whenStored']
-        if (whenStored) {
-            const completeResponse = await deleteOne(myBrainUserId, deviceId, whenStored)
-            response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ONE_FAILED)
-        } else {
-            return error.getResponse(error.MISSING_WHEN_STORED)
-        }
-    } else if (body['list']) {
-        const completeResponse = await getList(myBrainUserId, deviceId)
-        response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with list')
-    } else if (actionType === ACTION_GET_REPORT) {
+    if (actionType === ACTION_GET_REPORT) {
         const completeResponse = await getReport()
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
+    } else if (onlyReportGenerationAllowed) {
+        return error.getResponse(error.REPORT_API_KEY_EXCEEDED)
     } else {
-        response = error.getResponse(error.MISSING_API_COMMAND)
+        // any operation requiring full permissions must be in here
+        if (body['statement']) {
+            let cleanText = wordModule.cleanUpResponseText(body['statement'])
+            const completeResponse = await getResponseToStatement(myBrainUserId, deviceId, cleanText)
+            response = wrap(completeResponse)
+        } else if (body['question']) {
+            let cleanText = wordModule.cleanUpResponseText(body['question'])
+            const completeResponse = await getResponseToQuestion(myBrainUserId, deviceId, cleanText)
+            response = completeResponse ? wrap(completeResponse) : error.getResponse(error.EMPTY_QUESTION)
+        } else if (body['deleteAll']) {
+            const completeResponse = await deleteAll(myBrainUserId, deviceId)
+            response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ALL_FAILED)
+        } else if (body['deleteOne']) {
+            const whenStored = body['whenStored']
+            if (whenStored) {
+                const completeResponse = await deleteOne(myBrainUserId, deviceId, whenStored)
+                response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ONE_FAILED)
+            } else {
+                return error.getResponse(error.MISSING_WHEN_STORED)
+            }
+        } else if (body['list']) {
+            const completeResponse = await getList(myBrainUserId, deviceId)
+            response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with list')
+        } else if (actionType === ACTION_GET_REPORT) {
+            const completeResponse = await getReport()
+            response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
+        } else {
+            response = error.getResponse(error.MISSING_API_COMMAND)
+        }
     }
 
     console.log('response:', JSON.stringify(response, null, 2))
