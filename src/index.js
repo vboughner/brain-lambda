@@ -6,6 +6,7 @@ const searchModule = require('./search')
 const reportModule = require('./report')
 const dbModule = require('./db')
 const timeModule = require('./time')
+const types = require('./types')
 const error = require('./error.js')
 
 const SECRET_CLIENT_API_KEY = process.env['SECRET_CLIENT_API_KEY']
@@ -16,14 +17,6 @@ const ACCESS_LEVEL_NONE = 'none'
 
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
 const SERVER_VERSION = '1.2.0'
-
-// these should be the same as those in the capsule rest.js file
-const ACTION_TYPE_MEMORIZE = 'memorize'
-const ACTION_TYPE_RECALL = 'recall'
-const ACTION_TYPE_LIST = 'list'
-const ACTION_TYPE_DELETE_ALL = 'delete-all'
-const ACTION_TYPE_DELETE_ONE = 'delete-one'
-const ACTION_TYPE_GET_REPORT = 'get-report'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -83,21 +76,21 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
     let response
     const actionType = request['actionType'] || 'unknown-action-type'
     // note: we still need the request field checks, because ACTION_TYPE is not used by older clients (< v1.2.0)
-    if (actionType === ACTION_TYPE_MEMORIZE || request['statement']) {
+    if (actionType === types.ACTION_TYPE_MEMORIZE || request['statement']) {
         let cleanText = wordModule.cleanUpResponseText(request['statement'])
         const completeResponse = await memorizeStatement(userId, deviceId, cleanText)
         response = wrap(completeResponse)
-    } else if (actionType === ACTION_TYPE_RECALL || request['question']) {
+    } else if (actionType === types.ACTION_TYPE_RECALL || request['question']) {
         let cleanText = wordModule.cleanUpResponseText(request['question'])
         const completeResponse = await recallForQuestion(userId, deviceId, cleanText)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.EMPTY_QUESTION)
-    } else if (actionType === ACTION_TYPE_LIST || request['list']) {
+    } else if (actionType === types.ACTION_TYPE_LIST || request['list']) {
         const completeResponse = await getList(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with list')
-    } else if (actionType === ACTION_TYPE_DELETE_ALL || request['deleteAll']) {
+    } else if (actionType === types.ACTION_TYPE_DELETE_ALL || request['deleteAll']) {
         const completeResponse = await deleteAll(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ALL_FAILED)
-    } else if (actionType === ACTION_TYPE_DELETE_ONE || request['deleteOne']) {
+    } else if (actionType === types.ACTION_TYPE_DELETE_ONE || request['deleteOne']) {
         const whenStored = request['whenStored']
         if (whenStored) {
             const completeResponse = await deleteOne(userId, deviceId, whenStored)
@@ -105,8 +98,8 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
         } else {
             return error.getResponse(error.MISSING_WHEN_STORED)
         }
-    } else if (actionType === ACTION_TYPE_GET_REPORT) {
-        const completeResponse = await getReport()
+    } else if (actionType === types.ACTION_TYPE_GET_REPORT) {
+        const completeResponse = await getReport(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
@@ -118,7 +111,7 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
 
 const reportsOnlyAccessHandler = async (userId, deviceId, request) => {
     const actionType = request['actionType'] || 'unknown-action-type'
-    if (actionType === ACTION_TYPE_GET_REPORT) {
+    if (actionType === types.ACTION_TYPE_GET_REPORT) {
         const completeResponse = await getReport(userId, deviceId)
         const response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
         console.log('response:', JSON.stringify(response, null, 2))
@@ -313,99 +306,4 @@ async function getReport(userId, deviceId) {
         }
     }
     return response;
-}
-
-const handleCmdlineStatement = async (userId, deviceId, content) => {
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
-    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
-    let cleanText = wordModule.cleanUpResponseText(content);
-    console.log('statement:', cleanText);
-    const response = await memorizeStatement(myBrainUserId, deviceId, cleanText);
-    console.log('response:', response.speech);
-    return response.speech;
-};
-
-const handleCmdlineQuestion = async (userId, deviceId, content) => {
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
-    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
-    let cleanText = wordModule.cleanUpResponseText(content);
-    console.log('question:', cleanText);
-    const response = await recallForQuestion(myBrainUserId, deviceId, cleanText);
-    console.log('response:', response.speech);
-    return response.speech;
-};
-
-const handleCmdlineList = async (userId, deviceId) => {
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
-    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
-    console.log('list');
-    const response = await getList(myBrainUserId, deviceId);
-    console.log('response:', JSON.stringify(response, null, 2));
-    return response;
-};
-
-const handleCmdlineDeleteOne = async (userId, deviceId, content) => {
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
-    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
-    console.log('delete one:', content);
-    const response = await deleteOne(myBrainUserId, deviceId, content);
-    console.log('response:', JSON.stringify(response, null, 2));
-    return response;
-}
-
-const handleCmdlineDeleteAll = async (userId, deviceId) => {
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
-    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
-    console.log('delete all');
-    const response = await deleteAll(myBrainUserId, deviceId);
-    console.log('response:', JSON.stringify(response, null, 2));
-    return response;
-}
-
-const handleCmdlineReport = async (userId, deviceId) => {
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
-    console.log('userId', userId, ' -> myBrainUserId', myBrainUserId)
-    const response = await getReport(myBrainUserId, deviceId);
-    console.log('response:', JSON.stringify(response, null, 2));
-    return response;
-}
-
-// command line tests use something like this:
-//     node index.js statement 'my birthday is in january'
-//     node index.js question 'my birthday'
-//     node index.js delete
-//
-// the following bit of code should only run when we are NOT on the real lambda service
-if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src') !== -1) {
-    const userId = 'test';
-    const deviceId = 'cmdline';
-    if (process.argv.length === 4) {
-        const command = process.argv[2];
-        const content = process.argv[3];
-        if (command === 'statement') {
-            handleCmdlineStatement(userId, deviceId, content);
-            return 0;
-        } else if (command === 'question') {
-            handleCmdlineQuestion(userId, deviceId, content);
-            return 0;
-        } else if (command === 'deleteOne') {
-            handleCmdlineDeleteOne(userId, deviceId, content);
-            return 0;
-        }
-    } else if (process.argv.length === 3) {
-        const command = process.argv[2];
-        if (command === 'list') {
-            handleCmdlineList(userId, deviceId);
-            return 0;
-        } else if (command === 'deleteAll') {
-            handleCmdlineDeleteAll(userId, deviceId);
-            return 0;
-        } else if (command === 'report') {
-            handleCmdlineReport(userId, deviceId);
-            return 0;
-        }
-    }
-
-    console.log('usage: node index.js [statement|question|list|deleteAll|report] ["content"]');
-    return 1;
 }

@@ -10,12 +10,12 @@
     "clean": "rm -rf index.zip nodejs.zip nodejs",
     "test": "echo cd src && yarn test",
     "watch": "echo cd src && yarn run watch",
-    "question": "node src/index.js question",
-    "statement": "node src/index.js statement",
-    "list": "node src/index.js list",
-    "deleteAll": "node src/index.js deleteAll",
-    "deleteOne": "node src/index.js deleteOne",
-    "report": "node src/index.js report"
+    "memorize": "node src/cmdline.js memorize",
+    "recall": "node src/cmdline.js recall",
+    "list": "node src/cmdline.js list",
+    "delete-all": "node src/cmdline.js delete-all",
+    "delete-one": "node src/cmdline.js delete-one",
+    "get-report": "node src/cmdline.js get-report"
   },
   "repository": {
     "type": "git",
