@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "deploy":"./deploy.sh",
+    "layer": "./layer.sh",
     "postinstall": "cd src && yarn install",
+    "clean": "rm -rf index.zip nodejs.zip nodejs",
     "test": "echo cd src && yarn test",
     "watch": "echo cd src && yarn run watch",
     "question": "node src/index.js question",
