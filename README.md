@@ -26,10 +26,17 @@ This repository is under active development and may not reflect the easiest way 
 
 Run `yarn install` to make sure all the npm modules are loaded, including in the `src` folder.
 
+Before this code can be deployed, you must create a lambda by the name `brain-lambda` in your AWS account.
+Also, you'll need to establish an AWS layer
+(see [this article](https://medium.com/@anjanava.biswas/nodejs-runtime-environment-with-aws-lambda-layers-f3914613e20e),
+anr run `yarn layer` to prepare the zip file you need).
+
 To deploy new code to the AWS lambda, you need the AWS configuration (permissions), and run `yarn deploy`
 
-To store a memory from the command line use `yarn run statement 'place statement text here'`
+To store a memory from the command line use `yarn run memorize 'place statement text here'`
 
-To try a question from the command line use `yarn run question 'place question text here'`
+To try a question from the command line use `yarn run recall 'place question text here'`
 
 To list all memories from the command line use `yarn run list`
+
+To see a report of how many people are using the capsule, use `yarn run report`
