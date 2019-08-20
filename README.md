@@ -39,4 +39,4 @@ To try a question from the command line use `yarn run recall 'place question tex
 
 To list all memories from the command line use `yarn run list`
 
-To see a report of how many people are using the capsule, use `yarn run report`
+To see a report of how many people are using the capsule, use `yarn run get-report`

@@ -75,7 +75,6 @@ async function compileReport(userId, deviceId) {
             if (memory.WhenStored > mostRecentlyAddedTimestamp) {
                 mostRecentlyAddedTimestamp = memory.WhenStored
             }
-
         })
         const msSinceMemoryMade = currentTimestamp - mostRecentlyAddedTimestamp
         if (msSinceMemoryMade <= msInDay) {
