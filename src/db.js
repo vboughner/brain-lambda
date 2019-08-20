@@ -1,10 +1,11 @@
 'use strict';
 
-const awsSDK = require('aws-sdk');
-const docClient = new awsSDK.DynamoDB.DocumentClient({ region: 'us-east-1' });
-const storeTable = 'MyBrainLines';
-const emailTable = 'MyBrainUserIds';
-const maxBatchOperations = 25;    // you get an error with too many batch operations at once
+const awsSDK = require('aws-sdk')
+const docClient = new awsSDK.DynamoDB.DocumentClient({ region: 'us-east-1' })
+const storeTable = 'MyBrainLines'
+const emailTable = 'MyBrainUserIds'
+const reportTable = 'MyBrainReports'
+const maxBatchOperations = 25 // you get an error with too many batch operations at once
 
 // searches the MyBrainEmails table for an entry for the given assistantUserId, if one is
 // found, it will return the myBrainUserId associated with that assistantUserId, and this
@@ -225,6 +226,35 @@ async function loadEverything() {
     })
 }
 
+// store a report to a row in the report db, returns an object describing what was stored,
+// or null if not successfully stored
+async function storeReport(userId, deviceId, serverVersion, report) {
+    return new Promise((resolve, reject) => {
+        let whenStored = Date.now().toString();
+        let params = {
+            TableName: reportTable,
+            Item: {
+                UserId: userId,
+                WhenStored: whenStored,
+                DeviceId: deviceId,
+                ServerVersion: serverVersion,
+                Report: report,
+            }
+        };
+        // console.log('DEBUG: storing with db params = ' + JSON.stringify(params));
+
+        // noinspection JSUnusedLocalSymbols
+        docClient.put(params, function (err, data) {
+            if (err) {
+                console.log('ERROR: problem in put operation = ' + JSON.stringify(err));
+                resolve(null);
+            } else {
+                resolve(params.Item);
+            }
+        });
+    });
+}
+
 // noinspection JSUnresolvedVariable
 module.exports = {
     getMyBrainUserId: getMyBrainUserId,
@@ -233,4 +263,5 @@ module.exports = {
     eraseOneMemory: eraseOneMemory,
     eraseAllMemories: eraseAllMemories,
     loadEverything: loadEverything,
+    storeReport: storeReport,
 };

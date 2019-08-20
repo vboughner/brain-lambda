@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 const dbModule = require('./db')
 const timeModule = require('./time')
@@ -62,14 +62,7 @@ async function compileReport(userId, deviceId) {
     }
 }
 
-// stores the report in the database for reports, keyed by currentTimestamp in the report
-async function storeReport(userId, deviceId, report) {
-    // TODO: store the report in a table meant for reports and keyed by timestamp
-    // TODO: update the callers of getReport to also call storeReport
-}
-
 // noinspection JSUnresolvedVariable
 module.exports = {
     compileReport: compileReport,
-    storeReport: storeReport,
-};
+}

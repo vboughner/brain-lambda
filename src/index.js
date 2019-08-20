@@ -292,9 +292,13 @@ async function getReport(userId, deviceId) {
     let response
     const report = await reportModule.compileReport(userId, deviceId)
     if (report) {
+        const storedReport = await dbModule.storeReport(userId, deviceId, SERVER_VERSION, report)
+        const speech = storedReport
+            ? 'Here is the report you requested.'
+            : 'Here is the report, but I could not store a copy.'
         response = {
             success: true,
-            speech: 'Here is the report you requested.',
+            speech: speech,
             serverVersion: SERVER_VERSION,
             report: report,
         }
