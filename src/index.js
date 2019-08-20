@@ -77,8 +77,9 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
     const actionType = request['actionType'] || 'unknown-action-type'
     // note: we still need the request field checks, because ACTION_TYPE is not used by older clients (< v1.2.0)
     if (actionType === types.ACTION_TYPE_MEMORIZE || request['statement']) {
-        let cleanText = wordModule.cleanUpResponseText(request['statement'])
-        const completeResponse = await memorizeStatement(userId, deviceId, cleanText)
+        const { statement, canTypeId, timezone, storeCountry } = request
+        let cleanText = wordModule.cleanUpResponseText(statement)
+        const completeResponse = await memorizeStatement(userId, deviceId, canTypeId, timezone, storeCountry, cleanText)
         response = wrap(completeResponse)
     } else if (actionType === types.ACTION_TYPE_RECALL || request['question']) {
         let cleanText = wordModule.cleanUpResponseText(request['question'])
@@ -150,6 +151,9 @@ async function recallForQuestion(userId, deviceId, text) {
                 whenStored: selectedMemory.WhenStored,
                 userId: selectedMemory.UserId,
                 deviceId: selectedMemory.DeviceId,
+                canTypeId: selectedMemory.CanTypeId || 'unknown',
+                timezone: selectedMemory.Timezone || 'unknown',
+                storeCountry: selectedMemory.StoreCountry || 'unknown',
                 score: selectedMemory.Score,
                 howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: use locale
             };
@@ -187,11 +191,11 @@ function selectBestMemoriesForQuestion(memories, question) {
 }
 
 // returns a response object that contains everything about a statement, after storing information
-async function memorizeStatement(userId, deviceId, text) {
+async function memorizeStatement(userId, deviceId, canTypeId, timezone, storeCountry, text) {
     let refinedText = wordModule.cutStatementChatter(text)
     let response = {}
     if (refinedText) {
-        const item = await dbModule.storeMemory(userId, deviceId, refinedText)
+        const item = await dbModule.storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, refinedText)
         if (item) {
             response.success = true
             response.text = item.Text
@@ -229,6 +233,9 @@ async function getList(userId, deviceId) {
                 whenStored: selectedMemory.WhenStored,
                 userId: selectedMemory.UserId,
                 deviceId: selectedMemory.DeviceId,
+                canTypeId: selectedMemory.CanTypeId || 'unknown',
+                timezone: selectedMemory.Timezone || 'unknown',
+                storeCountry: selectedMemory.StoreCountry || 'unknown',
                 score: selectedMemory.Score,
                 howLongAgo: timeModule.getHowLongAgoText(Number(selectedMemory.WhenStored)), // TODO: use locale
             })

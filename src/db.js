@@ -73,7 +73,7 @@ async function loadMemories(userId, deviceId) {
 
 // store a line of text in the db, returns an object describing what was stored,
 // or null if not successfully stored
-async function storeMemory(userId, deviceId, text) {
+async function storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, text) {
     return new Promise((resolve, reject) => {
         let when = Date.now().toString();
         let params = {
@@ -82,6 +82,9 @@ async function storeMemory(userId, deviceId, text) {
                 UserId: userId,
                 DeviceId: deviceId,
                 WhenStored: when,
+                CanTypeId: canTypeId || 'unknown',
+                Timezone: timezone || 'unknown',
+                StoreCountry: storeCountry || 'unknown',
                 Text: text
             }
         };

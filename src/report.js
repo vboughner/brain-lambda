@@ -30,6 +30,7 @@ async function compileReport(userId, deviceId) {
     let numCharactersStored = 0
     let minCharactersStored = 99999
     let maxCharactersStored = 0
+    const memoryCanTypeIdCountMap = {}
 
     const msInDay = 1000 * 60 * 60 * 24
     const msInWeek = msInDay * 7
@@ -62,6 +63,13 @@ async function compileReport(userId, deviceId) {
         minCharactersStored = Math.min(minCharactersStored, numCharacters)
         maxCharactersStored = Math.max(maxCharactersStored, numCharacters)
         numCharactersStored += numCharacters
+        if (memory.CanTypeId) {
+            const currentValue = memoryCanTypeIdCountMap[memory.CanTypeId] || 0
+            memoryCanTypeIdCountMap[memory.CanTypeId] = currentValue + 1
+        } else {
+            const currentValue = memoryCanTypeIdCountMap['unknown'] || 0
+            memoryCanTypeIdCountMap['unknown'] = currentValue + 1
+        }
     })
 
     const numUniqueUsers = userToMemoryMap.size
@@ -69,11 +77,21 @@ async function compileReport(userId, deviceId) {
     const averageCharactersPerMemory = numTotalMemories ? Math.round(numCharactersStored / numTotalMemories * 100) / 100 : 0
     const averageCharactersPerUser = numUniqueUsers ? Math.round(numCharactersStored / numUniqueUsers * 100) / 100 : 0
 
+    const userStoreCountryCountMap = {}
+    const userTimezoneCountMap = {}
     userToMemoryMap.forEach((memories, userId, map) => {
+        let storeCountry = 'unknown'
+        let timezone = 'unknown'
         let mostRecentlyAddedTimestamp = 0
         memories.forEach((memory) => {
             if (memory.WhenStored > mostRecentlyAddedTimestamp) {
                 mostRecentlyAddedTimestamp = memory.WhenStored
+            }
+            if (memory.StoreCountry) {
+                storeCountry = memory.StoreCountry
+            }
+            if (memory.Timezone) {
+                timezone = memory.Timezone
             }
         })
         const msSinceMemoryMade = currentTimestamp - mostRecentlyAddedTimestamp
@@ -86,6 +104,10 @@ async function compileReport(userId, deviceId) {
         if (msSinceMemoryMade <= msInMonth) {
             numUsersActiveInMonth++
         }
+        const currentStoreCountryCount = userStoreCountryCountMap[storeCountry] || 0
+        userStoreCountryCountMap[storeCountry] = currentStoreCountryCount + 1
+        const currentTimezoneCount = userTimezoneCountMap[timezone] || 0
+        userTimezoneCountMap[timezone] = currentTimezoneCount + 1
     })
 
     const numUsersInactiveForMoreThanMonth = numUniqueUsers - numUsersActiveInMonth
@@ -119,6 +141,9 @@ async function compileReport(userId, deviceId) {
         maxCharactersStored,
         averageCharactersPerMemory,
         averageCharactersPerUser,
+        memoryCanTypeIdCountMap,
+        userStoreCountryCountMap,
+        userTimezoneCountMap,
         reportRequestedByUserId: userId,
         reportRequestedByDeviceId: deviceId,
     }
