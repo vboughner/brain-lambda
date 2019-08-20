@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 // clean up the text in the response before it is used for anything, we no longer make it lower case here or
 // cut out punctuation, because we want it stored as it appears (later when we are searching, we'll make some

@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 const awsSDK = require('aws-sdk')
 const docClient = new awsSDK.DynamoDB.DocumentClient({ region: 'us-east-1' })

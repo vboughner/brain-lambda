@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 // fuse.js library helps with fuzzy search for a string, see http://fusejs.io/
 // threshold 0.0 requires a perfect match, threshold 1.0 matches anything

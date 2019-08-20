@@ -20,7 +20,7 @@ const MESSAGE = {
     [INCORRECT_CLIENT_AUTH]: 'incorrect client authentication',
     [MISSING_USER_ID]: 'missing userId',
     [EMPTY_QUESTION]: 'missing a complete response, maybe it was not a question',
-    [MISSING_API_COMMAND]: 'missing a field that specifies which action to take',
+    [MISSING_API_COMMAND]: 'missing actionType or a field that indicates which action to take',
     [MISSING_WHEN_STORED]: 'missing whenStored field to specify which memory',
     [DELETE_ALL_FAILED]: 'problem during delete all operation',
     [DELETE_ONE_FAILED]: 'problem during delete one operation',
