@@ -16,7 +16,7 @@ const ACCESS_LEVEL_REPORTS = 'reports-only'
 const ACCESS_LEVEL_NONE = 'none'
 
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.2.0'
+const SERVER_VERSION = '1.2.1'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -37,12 +37,16 @@ exports.handler = async (event) => {
     }
 
     const userId = body['userId']
-    if (!userId) {
+    const bixbyUserId = body['vivContext'] ? body['vivContext']['bixbyUserId'] : null
+    if (!userId && !bixbyUserId) {
         return error.getResponse(error.MISSING_USER_ID)
     }
-    const myBrainUserId = await dbModule.getMyBrainUserId(userId)
     const deviceId = body['deviceId'] || body['deviceModel'] || 'unknown-device-id'
-    console.log('myBrainUserId is', myBrainUserId, ', deviceId is', deviceId)
+    const myBrainUserId = await dbModule.getMyBrainUserIdThruMigration(userId, bixbyUserId, deviceId)
+    console.log('myBrainUserId is', myBrainUserId)
+    if (!myBrainUserId) {
+        return error.getResponse(error.MISSING_USER_ID)
+    }
 
     if (accessLevel === ACCESS_LEVEL_SECRETS) {
         return await allSecretsAccessHandler(myBrainUserId, deviceId, body)

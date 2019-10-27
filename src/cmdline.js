@@ -6,6 +6,7 @@
 
 const CMDLINE_CLIENT_VERSION = '1.2.0'
 const CMDLINE_USER_ID = 'cmdline-user-id-001'
+const CMDLINE_BIXBY_USER_ID = 'cmdline-bixby-user-id-001'
 const CMDLINE_DEVICE_ID = 'cmdline-device-id-001'
 const CMDLINE_CAN_TYPE_ID = 'bixby-mobile-en-US'
 const CMDLINE_COUNTRY = 'US'
@@ -68,6 +69,9 @@ async function makeRequest(type, params = {}) {
             clientVersion: CMDLINE_CLIENT_VERSION,
             secretClientApiKey: process.env['SECRET_CLIENT_API_KEY'],
             userId: CMDLINE_USER_ID,
+            vivContext: {
+                bixbyUserId: CMDLINE_BIXBY_USER_ID,
+            },
             deviceId: CMDLINE_DEVICE_ID,
             canTypeId: CMDLINE_CAN_TYPE_ID,
             country:  CMDLINE_COUNTRY,

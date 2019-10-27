@@ -40,6 +40,65 @@ async function getMyBrainUserId(assistantUserId) {
     });
 }
 
+// store a link so that a login with assistantUserId will be translated to myBrainUserId
+// in future lookups, returns an object describing what was stored, or null if not successful
+async function storeMyBrainUserId(assistantUserId, myBrainUserId, deviceId) {
+    return new Promise((resolve, reject) => {
+        let when = Date.now().toString();
+        let params = {
+            TableName: emailTable,
+            Item: {
+                AssistantUserId: assistantUserId,
+                BrainUserId: myBrainUserId,
+                DeviceId: deviceId,
+                WhenUpdated: when,
+            }
+        };
+        // console.log('DEBUG: storing with db params = ' + JSON.stringify(params));
+
+        // noinspection JSUnusedLocalSymbols
+        docClient.put(params, function (err, data) {
+            if (err) {
+                console.log('ERROR: problem in put operation = ' + JSON.stringify(err));
+                resolve(null);
+            } else {
+                resolve(params.Item);
+            }
+        });
+    });
+}
+
+// useful for user id migrations... given assistant user ids 1 and 2, will use whichever
+// one is provided as an input for getMyBrainUserId while only one id is provided before or
+// after the migration period. But when both ids are provided, it means that a migration
+// from assistant user id 1 to 2 is going on, and it is important to establish a link
+// during this period from the new id (assistantUserId2) to all records that are
+// stored under the old id (assistantUserId1), and keep using the old id in the db
+async function getMyBrainUserIdThruMigration(assistantUserId1, assistantUserId2, deviceId) {
+    console.log('getMyBrainUserIdThruMigration: ', assistantUserId1, ' ==> ', assistantUserId2)
+    if (assistantUserId1 && assistantUserId2) {
+        const targetUserId = await getMyBrainUserId(assistantUserId2)
+        if (targetUserId !== assistantUserId2) {
+            // when the newer user id already has a lookup to something else, use it
+            return new Promise((resolve, reject) => {
+                resolve(targetUserId)
+            })
+        }
+        // otherwise create a new lookup for linking new user id to old, and use it now too
+        const stored = await storeMyBrainUserId(assistantUserId2, assistantUserId1, deviceId)
+        return new Promise((resolve, reject) => {
+            resolve(assistantUserId1)
+        })
+    } else if (assistantUserId1 || assistantUserId2) {
+        return getMyBrainUserId(assistantUserId1 ? assistantUserId1 : assistantUserId2)
+    } else {
+        console.log('ERROR: neither user id has been provided in getMyBrainUserIdThruMigration')
+        return new Promise((resolve, reject) => {
+            resolve(null)
+        })
+    }
+}
+
 // load everything from memory in the db for this user, returns the array of data items
 async function loadMemories(userId, deviceId) {
     return new Promise((resolve, reject) => {
@@ -260,7 +319,7 @@ async function storeReport(userId, deviceId, serverVersion, report) {
 
 // noinspection JSUnresolvedVariable
 module.exports = {
-    getMyBrainUserId: getMyBrainUserId,
+    getMyBrainUserIdThruMigration: getMyBrainUserIdThruMigration,
     loadMemories: loadMemories,
     storeMemory: storeMemory,
     eraseOneMemory: eraseOneMemory,
