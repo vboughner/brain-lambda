@@ -16,7 +16,7 @@ const ACCESS_LEVEL_REPORTS = 'reports-only'
 const ACCESS_LEVEL_NONE = 'none'
 
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.2.1'
+const SERVER_VERSION = '1.3.0'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -36,12 +36,17 @@ exports.handler = async (event) => {
         return error.getResponse(error.INCORRECT_CLIENT_AUTH)
     }
 
-    const userId = body['userId']
+    // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
+    const userId = body['vivContext'] ? body['vivContext']['userId'] : body['userId']
     const bixbyUserId = body['vivContext'] ? body['vivContext']['bixbyUserId'] : null
     if (!userId && !bixbyUserId) {
         return error.getResponse(error.MISSING_USER_ID)
     }
-    const deviceId = body['deviceId'] || body['deviceModel'] || 'unknown-device-id'
+    // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
+    const deviceId = body['deviceId']
+        || body['deviceModel']
+        || body['vivContext'] ? body['vivContext']['deviceModel'] : null
+        || 'unknown-device-id'
     const myBrainUserId = await dbModule.getMyBrainUserIdThruMigration(userId, bixbyUserId, deviceId)
     console.log('myBrainUserId is', myBrainUserId)
     if (!myBrainUserId) {
@@ -81,7 +86,9 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
     const actionType = request['actionType'] || 'unknown-action-type'
     // note: we still need the request field checks, because ACTION_TYPE is not used by older clients (< v1.2.0)
     if (actionType === types.ACTION_TYPE_MEMORIZE || request['statement']) {
-        const { statement, canTypeId, timezone, storeCountry } = request
+        const { statement } = request
+        // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
+        const { canTypeId, timezone, storeCountry } = request['vivContext'] || request
         let cleanText = wordModule.cleanUpResponseText(statement)
         const completeResponse = await memorizeStatement(userId, deviceId, canTypeId, timezone, storeCountry, cleanText)
         response = wrap(completeResponse)

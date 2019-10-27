@@ -4,12 +4,14 @@
 // as this is the cmdline testing module, and it should NEVER be
 // imported by index.js
 
-const CMDLINE_CLIENT_VERSION = '1.2.0'
+const CMDLINE_CLIENT_VERSION = '1.3.0'
 const CMDLINE_USER_ID = 'cmdline-user-id-001'
 const CMDLINE_BIXBY_USER_ID = 'cmdline-bixby-user-id-001'
-const CMDLINE_DEVICE_ID = 'cmdline-device-id-001'
+const CMDLINE_DEVICE_MODEL = 'cmdline-device-model-001'
 const CMDLINE_CAN_TYPE_ID = 'bixby-mobile-en-US'
-const CMDLINE_COUNTRY = 'US'
+const CMDLINE_STORE_COUNTRY = 'US'
+const CMDLINE_TIMEZONE = "America/Los_Angeles"
+const CMDLINE_HANDS_FREE = false
 
 if (!process.env['SECRET_CLIENT_API_KEY']) {
     // this will override the key for local cmdline client requests only
@@ -68,13 +70,15 @@ async function makeRequest(type, params = {}) {
             actionType: type,
             clientVersion: CMDLINE_CLIENT_VERSION,
             secretClientApiKey: process.env['SECRET_CLIENT_API_KEY'],
-            userId: CMDLINE_USER_ID,
             vivContext: {
-                bixbyUserId: CMDLINE_BIXBY_USER_ID,
+                "userId": CMDLINE_USER_ID,
+                "bixbyUserId": CMDLINE_BIXBY_USER_ID,
+                "canTypeId": CMDLINE_CAN_TYPE_ID,
+                "storeCountry":CMDLINE_STORE_COUNTRY,
+                "deviceModel": CMDLINE_DEVICE_MODEL,
+                "timezone": CMDLINE_TIMEZONE,
+                "handsFree": CMDLINE_HANDS_FREE,
             },
-            deviceId: CMDLINE_DEVICE_ID,
-            canTypeId: CMDLINE_CAN_TYPE_ID,
-            country:  CMDLINE_COUNTRY,
             ...params,
         }
     }
