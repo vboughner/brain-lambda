@@ -43,10 +43,7 @@ exports.handler = async (event) => {
         return error.getResponse(error.MISSING_USER_ID)
     }
     // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
-    const deviceId = body['deviceId']
-        || body['deviceModel']
-        || body['vivContext'] ? body['vivContext']['deviceModel'] : null
-        || 'unknown-device-id'
+    const deviceId = body['deviceId'] || body['deviceModel'] || (body['vivContext'] ? body['vivContext']['deviceModel'] : null) || 'unknown-device-id'
     const myBrainUserId = await dbModule.getMyBrainUserIdThruMigration(userId, bixbyUserId, deviceId)
     console.log('myBrainUserId is', myBrainUserId)
     if (!myBrainUserId) {
