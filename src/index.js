@@ -175,9 +175,19 @@ async function recallForQuestion(userId, deviceId, text) {
         response.speech = 'You told me ' + response.answers[0].howLongAgo + ': ' + response.answers[0].text + '.'
         response.serverVersion = SERVER_VERSION
     }
+    else if (recordedMemories.length === 0) {
+        response.success = false
+        response.speech = `There are no memories, please ask me to remember something first.`
+        response.serverVersion = SERVER_VERSION
+    }
+    else if (refinedText) {
+        response.success = false
+        response.speech = `I can't find a memory that matches a search for "${refinedText}". Please try another question.`
+        response.serverVersion = SERVER_VERSION
+    }
     else {
         response.success = false
-        response.speech = 'I don\'t have a memory that makes sense as an answer for that.'
+        response.speech = `I can't find a memory that makes sense as an answer for that.`
         response.serverVersion = SERVER_VERSION
     }
     return response
