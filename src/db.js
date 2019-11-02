@@ -131,10 +131,11 @@ async function loadMemories(userId, deviceId) {
 }
 
 // store a line of text in the db, returns an object describing what was stored,
-// or null if not successfully stored
-async function storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, text) {
+// or null if not successfully stored, pass in whenStored as non-zero if you wish
+// to specify it (instead of just using the current time)
+async function storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, text, whenStored = 0) {
     return new Promise((resolve, reject) => {
-        let when = Date.now().toString();
+        let when = whenStored ? whenStored : Date.now().toString();
         let params = {
             TableName: storeTable,
             Item: {
@@ -159,6 +160,20 @@ async function storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, 
             }
         });
     });
+}
+
+// updates the text of a memory in the db, returns an object describing what was updated,
+// or null if not successfully updated
+async function updateMemoryText(userId, deviceId, whenStored, text) {
+    const memories = await loadMemories(userId, deviceId)
+    for (let i = 0; i < memories.length; i++) {
+        if (memories[i].WhenStored === whenStored) {
+            const mem = memories[i]
+            return await storeMemory(userId, deviceId, mem.CanTypeId, mem.Timezone, mem.StoreCountry, text, whenStored)
+        }
+    }
+    console.log('ERROR: could not find memory stored at', whenStored)
+    return null
 }
 
 // remove one memory from the database, given the original item object made when recalling it,
@@ -322,6 +337,7 @@ module.exports = {
     getMyBrainUserIdThruMigration: getMyBrainUserIdThruMigration,
     loadMemories: loadMemories,
     storeMemory: storeMemory,
+    updateMemoryText: updateMemoryText,
     eraseOneMemory: eraseOneMemory,
     eraseAllMemories: eraseAllMemories,
     loadEverything: loadEverything,

@@ -12,6 +12,7 @@ const DELETE_ALL_FAILED = 1008
 const DELETE_ONE_FAILED = 1009
 const REPORT_FAILED = 1010
 const REPORT_API_KEY_EXCEEDED = 1011
+const MISSING_REPLACEMENT_TEXT = 1012
 
 const MESSAGE = {
     [UNSPECIFIED]: 'error with no message yet defined',
@@ -26,6 +27,7 @@ const MESSAGE = {
     [DELETE_ONE_FAILED]: 'problem during delete one operation',
     [REPORT_FAILED]: 'problem during report operation',
     [REPORT_API_KEY_EXCEEDED]: 'report api key permission limit exceeded',
+    [MISSING_REPLACEMENT_TEXT]: 'missing or empty replacementText field when updating memory',
 }
 
 const getResponse = (errorCode = UNSPECIFIED, overrideErrorMessage = '') => {
@@ -58,5 +60,6 @@ module.exports = {
     MESSAGE,
     REPORT_FAILED,
     REPORT_API_KEY_EXCEEDED,
+    MISSING_REPLACEMENT_TEXT,
     getResponse,
 }

@@ -53,6 +53,16 @@ function figureParams(type, extraArgs) {
             }
             break;
 
+        case types.ACTION_TYPE_UPDATE_TEXT:
+            // expecting two parameters, timestamp and replacementText
+            if (extraArgs && extraArgs.length > 1) {
+                params = { whenStored: extraArgs[0], replacementText: extraArgs[1] }
+            } else {
+                console.error('Error: expected two arguments: whenStored and replacementText')
+                process.exit(7);
+            }
+            break;
+
         case types.ACTION_TYPE_LIST:
         case types.ACTION_TYPE_DELETE_ALL:
         case types.ACTION_TYPE_GET_REPORT:
@@ -101,7 +111,7 @@ if (process && process.argv && process.argv[1] && process.argv[1].indexOf('src')
             process.exit(2);
         }
     } else {
-        console.log('usage: node cmdline.js list|memorize|recall|delete-all|delete-one|get-report args');
+        console.log('usage: node cmdline.js list|memorize|recall|update-text|delete-all|delete-one|get-report args');
         process.exit(1);
     }
 }

@@ -115,6 +115,20 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
         // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
         const { canTypeId } = request['vivContext'] || request
         response = wrap(getHelp(canTypeId))
+    } else if (actionType === types.ACTION_TYPE_UPDATE_TEXT) {
+        const { whenStored, replacementText } = request
+        if (whenStored && replacementText) {
+            // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
+            const { canTypeId } = request['vivContext'] || request
+            const completeResponse = await updateText(userId, deviceId, canTypeId, whenStored, replacementText)
+            response = wrap(completeResponse)
+        } else {
+            if (!whenStored) {
+                return error.getResponse(error.MISSING_WHEN_STORED)
+            } else {
+                return error.getResponse(error.MISSING_REPLACEMENT_TEXT)
+            }
+        }
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
     }
@@ -344,4 +358,27 @@ function getHelp(canTypeId) {
         speech: helpModule.getHelpText(canTypeId),
         serverVersion: SERVER_VERSION,
     }
+}
+
+async function updateText(userId, deviceId, canTypeId, whenStored, replacementText) {
+    const updatedMemory = await dbModule.updateMemoryText(userId, deviceId, whenStored, replacementText)
+    let response
+    if (updatedMemory) {
+        response = {
+            success: true,
+            userId: updatedMemory.UserId,
+            deviceId: updatedMemory.DeviceId,
+            whenStored: updatedMemory.WhenStored,
+            text: updatedMemory.Text,
+            howLongAgo: timeModule.getHowLongAgoText(Number(updatedMemory.WhenStored)), // TODO: use locale
+            speech: 'I updated that memory, and will remember that you said: ' + replacementText + '.',
+        }
+    } else {
+        response = {
+            success: false,
+            speech: 'There was a problem and I could not update that memory.',
+        }
+    }
+    response.serverVersion = SERVER_VERSION
+    return response
 }
