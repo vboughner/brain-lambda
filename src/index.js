@@ -4,6 +4,7 @@ const semver = require('semver')
 const wordModule = require('./word')
 const searchModule = require('./search')
 const reportModule = require('./report')
+const helpModule = require('./help')
 const dbModule = require('./db')
 const timeModule = require('./time')
 const types = require('./types')
@@ -16,7 +17,7 @@ const ACCESS_LEVEL_REPORTS = 'reports-only'
 const ACCESS_LEVEL_NONE = 'none'
 
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.3.0'
+const SERVER_VERSION = '1.4.0'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -110,6 +111,10 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
     } else if (actionType === types.ACTION_TYPE_GET_REPORT) {
         const completeResponse = await getReport(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
+    } else if (actionType === types.ACTION_TYPE_HELP) {
+        // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
+        const { canTypeId } = request['vivContext'] || request
+        response = wrap(getHelp(canTypeId))
     } else {
         response = error.getResponse(error.MISSING_API_COMMAND)
     }
@@ -321,4 +326,12 @@ async function getReport(userId, deviceId) {
         }
     }
     return response;
+}
+
+function getHelp(canTypeId) {
+    return {
+        success: true,
+        speech: helpModule.getHelpText(canTypeId),
+        serverVersion: SERVER_VERSION,
+    }
 }

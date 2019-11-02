@@ -1,12 +1,9 @@
 'use strict'
 
-function getHelpText() {
-    const helpText =
-        `Tell me to remember something, and I'll remember it.
-         Ask me a question, and I'll find the most recent thing you said about it.
-         I search all memories for the words in your question, and give you the most recent ones that match.
-         Thanks for letting me help you in some way!`
-    return helpText
+function getHelpText(canTypeId) {
+    // TODO: differentiate help based on canTypeId (for language and/or customized by device)
+    return `Tell me to remember something, and I'll remember it. ` +
+        `Ask me a question that includes a few words from that memory, and I'll find it for you.`
 }
 
 // noinspection JSUnresolvedVariable
