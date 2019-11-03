@@ -167,9 +167,9 @@ async function storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, 
 async function updateMemoryText(userId, deviceId, whenStored, text) {
     const memories = await loadMemories(userId, deviceId)
     for (let i = 0; i < memories.length; i++) {
-        if (memories[i].WhenStored === whenStored) {
+        if (memories[i].WhenStored.toString() === whenStored.toString()) {
             const mem = memories[i]
-            return await storeMemory(userId, deviceId, mem.CanTypeId, mem.Timezone, mem.StoreCountry, text, whenStored)
+            return await storeMemory(userId, deviceId, mem.CanTypeId, mem.Timezone, mem.StoreCountry, text, whenStored.toString())
         }
     }
     console.log('ERROR: could not find memory stored at', whenStored)
