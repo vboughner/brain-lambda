@@ -165,11 +165,15 @@ function wrap(completeResponse) {
 // an object that contains all the possible responses, in order from best to worst (or
 // an empty array of answers if there are no matches)
 async function recallForQuestion(userId, deviceId, text) {
-    let refinedText = wordModule.cutQuestionChatter(text)
+    let searchText = wordModule.cutQuestionChatter(text)
     const recordedMemories = await dbModule.loadMemories(userId, deviceId)
-    let bestMemories = selectBestMemoriesForQuestion(recordedMemories, refinedText)
-    let response = {}
-    response.answers = []
+    let bestMemories = selectBestMemoriesForQuestion(recordedMemories, searchText)
+    let response = {
+        answers: [],
+        searchText: searchText,
+        memoryCount: recordedMemories.length,
+        serverVersion: SERVER_VERSION,
+    }
     if (bestMemories && bestMemories.length > 0) {
         for (let i = 0; i < bestMemories.length; i++) {
             const selectedMemory = bestMemories[i]
@@ -187,22 +191,18 @@ async function recallForQuestion(userId, deviceId, text) {
         }
         response.success = true
         response.speech = 'You told me ' + response.answers[0].howLongAgo + ': ' + response.answers[0].text + '.'
-        response.serverVersion = SERVER_VERSION
     }
     else if (recordedMemories.length === 0) {
         response.success = false
         response.speech = `There are no memories, please ask me to remember something first.`
-        response.serverVersion = SERVER_VERSION
     }
-    else if (refinedText) {
+    else if (searchText) {
         response.success = false
-        response.speech = `I can't find a memory that matches a search for "${refinedText}". Please try another question.`
-        response.serverVersion = SERVER_VERSION
+        response.speech = `I can't find a memory that matches a search for "${searchText}". Please try another question.`
     }
     else {
         response.success = false
         response.speech = `I can't find a memory that makes sense as an answer for that.`
-        response.serverVersion = SERVER_VERSION
     }
     return response
 }
