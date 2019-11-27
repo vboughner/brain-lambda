@@ -37,14 +37,13 @@ exports.handler = async (event) => {
         return error.getResponse(error.INCORRECT_CLIENT_AUTH)
     }
 
-    // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
-    const userId = body['vivContext'] ? body['vivContext']['userId'] : body['userId']
-    const bixbyUserId = body['vivContext'] ? body['vivContext']['bixbyUserId'] : null
+    const userId = body['vivContext'] && body['vivContext']['userId']
+    const bixbyUserId = body['vivContext'] && body['vivContext']['bixbyUserId']
     if (!userId && !bixbyUserId) {
         return error.getResponse(error.MISSING_USER_ID)
     }
-    // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
-    const deviceId = body['deviceId'] || body['deviceModel'] || (body['vivContext'] ? body['vivContext']['deviceModel'] : null) || 'unknown-device-id'
+
+    const deviceId = (body['vivContext'] && body['vivContext']['deviceModel']) || 'unknown-device-id'
     const myBrainUserId = await dbModule.getMyBrainUserIdThruMigration(userId, bixbyUserId, deviceId)
     console.log('myBrainUserId is', myBrainUserId)
     if (!myBrainUserId) {
@@ -81,26 +80,28 @@ const determineAccessLevel = (request) => {
 
 const allSecretsAccessHandler = async (userId, deviceId, request) => {
     let response
+
+    const { canTypeId, timezone, storeCountry } = request['vivContext']
+    const localeName = timeModule.setLocaleUsingCanType(canTypeId)
+    console.log('Moment Locale: converted canTypeId', canTypeId, 'to locale', localeName)
+
     const actionType = request['actionType'] || 'unknown-action-type'
-    // note: we still need the request field checks, because ACTION_TYPE is not used by older clients (< v1.2.0)
-    if (actionType === types.ACTION_TYPE_MEMORIZE || request['statement']) {
+    if (actionType === types.ACTION_TYPE_MEMORIZE) {
         const { statement } = request
-        // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
-        const { canTypeId, timezone, storeCountry } = request['vivContext'] || request
         let cleanText = wordModule.cleanUpResponseText(statement)
         const completeResponse = await memorizeStatement(userId, deviceId, canTypeId, timezone, storeCountry, cleanText)
         response = wrap(completeResponse)
-    } else if (actionType === types.ACTION_TYPE_RECALL || request['question']) {
+    } else if (actionType === types.ACTION_TYPE_RECALL) {
         let cleanText = wordModule.cleanUpResponseText(request['question'])
         const completeResponse = await recallForQuestion(userId, deviceId, cleanText)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.EMPTY_QUESTION)
-    } else if (actionType === types.ACTION_TYPE_LIST || request['list']) {
+    } else if (actionType === types.ACTION_TYPE_LIST) {
         const completeResponse = await getList(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with list')
-    } else if (actionType === types.ACTION_TYPE_DELETE_ALL || request['deleteAll']) {
+    } else if (actionType === types.ACTION_TYPE_DELETE_ALL) {
         const completeResponse = await deleteAll(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.DELETE_ALL_FAILED)
-    } else if (actionType === types.ACTION_TYPE_DELETE_ONE || request['deleteOne']) {
+    } else if (actionType === types.ACTION_TYPE_DELETE_ONE) {
         const whenStored = request['whenStored']
         if (whenStored) {
             const completeResponse = await deleteOne(userId, deviceId, whenStored)
@@ -112,14 +113,10 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
         const completeResponse = await getReport(userId, deviceId)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.UNSPECIFIED, 'problem with report')
     } else if (actionType === types.ACTION_TYPE_HELP) {
-        // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
-        const { canTypeId } = request['vivContext'] || request
         response = wrap(getHelp(canTypeId))
     } else if (actionType === types.ACTION_TYPE_UPDATE_TEXT) {
         const { whenStored, replacementText } = request
         if (whenStored && replacementText) {
-            // note: we still need to look for certain fields outside of vivContext, for older clients (< v1.3.0)
-            const { canTypeId } = request['vivContext'] || request
             const completeResponse = await updateText(userId, deviceId, canTypeId, whenStored, replacementText)
             response = wrap(completeResponse)
         } else {
