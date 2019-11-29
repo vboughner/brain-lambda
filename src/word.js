@@ -50,7 +50,6 @@ function cutQuestionChatter(canTypeId, text) {
     let cutText = text;
     const languageCode = util.convertCanTypeIdToLanguageCode(canTypeId)
     if (beginningQuestionChatter[languageCode] && endingQuestionChatter[languageCode]) {
-        console.log('question chatter arrays', beginningQuestionChatter[languageCode], endingQuestionChatter[languageCode])
         for (let i = 0; i < beginningQuestionChatter[languageCode].length; i++) {
             if (cutText.startsWith(beginningQuestionChatter[languageCode][i] + ' ')) {
                 cutText = cutText.substring(beginningQuestionChatter[languageCode][i].length);
@@ -108,7 +107,6 @@ function cutStatementChatter(canTypeId, text) {
     let cutText = text;
     const languageCode = util.convertCanTypeIdToLanguageCode(canTypeId)
     if (beginningStatementChatter[languageCode] && endingStatementChatter[languageCode]) {
-        console.log('statement chatter arrays', beginningStatementChatter[languageCode], endingStatementChatter[languageCode])
         for (let i = 0; i < beginningStatementChatter[languageCode].length; i++) {
             if (cutText.startsWith(beginningStatementChatter[languageCode][i] + ' ')) {
                 cutText = cutText.substring(beginningStatementChatter[languageCode][i].length);
