@@ -93,7 +93,7 @@ const allSecretsAccessHandler = async (userId, deviceId, request) => {
         response = wrap(completeResponse)
     } else if (actionType === types.ACTION_TYPE_RECALL) {
         let cleanText = wordModule.cleanUpResponseText(request['question'])
-        const completeResponse = await recallForQuestion(userId, deviceId, cleanText)
+        const completeResponse = await recallForQuestion(userId, deviceId, canTypeId, cleanText)
         response = completeResponse ? wrap(completeResponse) : error.getResponse(error.EMPTY_QUESTION)
     } else if (actionType === types.ACTION_TYPE_LIST) {
         const completeResponse = await getList(userId, deviceId)
@@ -161,8 +161,8 @@ function wrap(completeResponse) {
 // assumes the input is a question and returns a complete response to the question, with
 // an object that contains all the possible responses, in order from best to worst (or
 // an empty array of answers if there are no matches)
-async function recallForQuestion(userId, deviceId, text) {
-    let searchText = wordModule.cutQuestionChatter(text)
+async function recallForQuestion(userId, deviceId, canTypeId, text) {
+    let searchText = wordModule.cutQuestionChatter(canTypeId, text)
     const recordedMemories = await dbModule.loadMemories(userId, deviceId)
     let bestMemories = selectBestMemoriesForQuestion(recordedMemories, searchText)
     let response = {
@@ -226,7 +226,7 @@ function selectBestMemoriesForQuestion(memories, question) {
 
 // returns a response object that contains everything about a statement, after storing information
 async function memorizeStatement(userId, deviceId, canTypeId, timezone, storeCountry, text) {
-    let refinedText = wordModule.cutStatementChatter(text)
+    let refinedText = wordModule.cutStatementChatter(canTypeId, text)
     let response = {}
     if (refinedText) {
         const item = await dbModule.storeMemory(userId, deviceId, canTypeId, timezone, storeCountry, refinedText)

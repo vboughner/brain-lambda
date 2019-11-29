@@ -1,25 +1,12 @@
 'use strict'
 
 const moment = require('moment')
-
-// converts something like 'bixby-mobile-en-GB' to 'en-GB'
-function convertCanTypeToLocaleName(canTypeId) {
-    let localeName = 'en'
-    if (canTypeId) {
-        const substrings = canTypeId.split('-')
-        if (substrings.length === 1) {
-            localeName = substrings[0]
-        } else {
-            localeName = substrings.slice(-2).join('-')
-        }
-    }
-    return localeName
-}
+const util = require('./util')
 
 // converts canTypeId to a locale name for moment and sets the global moment locale,
 // use before returning any responses from getHowLongAgoText, returns the locale name
 function setLocaleUsingCanType(canTypeId) {
-    const localeName = convertCanTypeToLocaleName(canTypeId)
+    const localeName = util.convertCanTypeIdToLocaleName(canTypeId)
     moment.locale(localeName);
     return localeName
 }
