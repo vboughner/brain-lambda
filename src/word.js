@@ -16,17 +16,21 @@ let beginningQuestionChatter = {
         'hello',
         'please',
         'can you',
-        'will you',
-        'would you',
         'say',
         'tell',
         'ask',
         'my brain',
         'to',
         'me',
-        'us',
     ],
     'es': [
+        'hola',
+        'por favor',
+        'puedes',
+        'dice',
+        'mi cerebro',
+        'a',
+        'yo',
     ],
 }
 
@@ -36,6 +40,7 @@ let endingQuestionChatter = {
         'thank you',
     ],
     'es': [
+        'gracias',
     ],
 };
 
@@ -78,6 +83,12 @@ let beginningStatementChatter = {
         'remember',
     ],
     'es': [
+        'hola',
+        'por favor',
+        'dile a mi cerebro',
+        'pregunta a mi cerebro',
+        'a',
+        'recuerda',
     ],
 }
 
@@ -85,9 +96,9 @@ let beginningStatementChatter = {
 let endingStatementChatter = {
     'en': [
         'thank you',
-        'very much',
     ],
     'es': [
+        'gracias',
     ],
 }
 
