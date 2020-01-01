@@ -17,7 +17,7 @@ const ACCESS_LEVEL_REPORTS = 'reports-only'
 const ACCESS_LEVEL_NONE = 'none'
 
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.4.0'
+const SERVER_VERSION = '1.4.1'
 
 exports.handler = async (event) => {
     const body = event['body-json']

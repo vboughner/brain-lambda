@@ -32,6 +32,16 @@ let beginningQuestionChatter = {
         'a',
         'yo',
     ],
+    'fr': [
+        'bonjour',
+        's\'il vous plaît',
+        'peut tu',
+        'dit',
+        'demande',
+        'mon cerveau',
+        'à',
+        'moi',
+    ],
 }
 
 // phrases that should be trimmed from the end of a question, order matters, they will be tried in order
@@ -41,6 +51,9 @@ let endingQuestionChatter = {
     ],
     'es': [
         'gracias',
+    ],
+    'fr': [
+        'merci',
     ],
 };
 
@@ -89,6 +102,17 @@ let beginningStatementChatter = {
         'a',
         'recuerda',
     ],
+    'fr': [
+        'bonjour',
+        's\'il vous plaît',
+        'peut tu',
+        'dit',
+        'mon cerveau',
+        'à',
+        'a',
+        'sur',
+        'que',
+    ],
 }
 
 // phrases that should be trimmed from the end of a statement, order matters, they will be tried in order
@@ -98,6 +122,9 @@ let endingStatementChatter = {
     ],
     'es': [
         'gracias',
+    ],
+    'fr': [
+        'merci',
     ],
 }
 
