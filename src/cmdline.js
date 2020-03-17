@@ -4,7 +4,7 @@
 // as this is the cmdline testing module, and it should NEVER be
 // imported by index.js
 
-const CMDLINE_CLIENT_VERSION = '1.4.1'
+const CMDLINE_CLIENT_VERSION = '1.5.0'
 const CMDLINE_USER_ID = 'cmdline-user-id-001'
 const CMDLINE_BIXBY_USER_ID = 'cmdline-bixby-user-id-001'
 const CMDLINE_DEVICE_MODEL = 'cmdline-device-model-001'

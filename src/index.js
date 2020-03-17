@@ -17,7 +17,7 @@ const ACCESS_LEVEL_REPORTS = 'reports-only'
 const ACCESS_LEVEL_NONE = 'none'
 
 const CLIENT_VERSION_SEMVER_SATISFIES = '1.x'
-const SERVER_VERSION = '1.4.1'
+const SERVER_VERSION = '1.5.0'
 
 exports.handler = async (event) => {
     const body = event['body-json']
@@ -164,7 +164,7 @@ function wrap(completeResponse) {
 async function recallForQuestion(userId, deviceId, canTypeId, text) {
     let searchText = wordModule.cutQuestionChatter(canTypeId, text)
     const recordedMemories = await dbModule.loadMemories(userId, deviceId)
-    let bestMemories = selectBestMemoriesForQuestion(recordedMemories, searchText)
+    let bestMemories = selectBestMemoriesForQuestion(canTypeId, recordedMemories, searchText)
     let response = {
         answers: [],
         searchText: searchText,
@@ -207,10 +207,10 @@ async function recallForQuestion(userId, deviceId, canTypeId, text) {
 // select the memories that best match the question and returns an array of them,
 // the best match is first in the returned array.
 // returns null if there are no memories
-function selectBestMemoriesForQuestion(memories, question) {
+function selectBestMemoriesForQuestion(canTypeId, memories, question) {
     if (memories && memories.length > 0) {
         // search for the right memory using words from the question
-        let results = searchModule.searchThruDataForString(memories, question)
+        let results = searchModule.searchThruDataForString(canTypeId, memories, question)
 
         if (results && results.length > 0) {
             return results
