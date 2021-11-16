@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/vboughner/brain-lambda#readme",
   "dependencies": {
-    "aws-sdk": "^2.203.0",
+    "aws-sdk": "^2.814.0",
     "fuse.js": "^3.2.0",
     "moment": "^2.21.0",
     "semver": "^6.0.0"
